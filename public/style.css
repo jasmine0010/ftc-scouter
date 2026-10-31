@@ -3858,10 +3858,12 @@ td {
 .counter > span:first-child {
   font-size: 18px;
   line-height: 1.3;
+  min-height: 0;
 }
 .counter .stepper {
   grid-template-columns: 40px 36px 40px;
   gap: 8px;
+  min-height: 40px;
 }
 .counter .stepper button {
   width: 40px;
@@ -3876,9 +3878,12 @@ td {
   font-size: 28px;
 }
 @media (max-width: 700px) {
+  #scout-form .scout-grid {
+    gap: 16px;
+  }
   #scout-form .counter {
-    padding: 8px 6px;
-    gap: 6px;
+    padding: 8px;
+    gap: 4px;
   }
   #scout-form .counter .stepper {
     grid-template-columns: 40px 32px 40px;
