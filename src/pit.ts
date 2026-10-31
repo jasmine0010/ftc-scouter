@@ -179,7 +179,7 @@ export async function renderPit(root: HTMLElement, editTeam?: number) {
     if (step === 1) {
       pit.team = Number(values.team);
       teamName = String(values.teamName ?? "");
-      pit.scout = settings.scoutName ?? pit.scout;
+      pit.scout = String(values.scout ?? "");
       pit.talkedAt = String(values.talkedAt ?? "");
     }
     if (step === 2) {
@@ -231,11 +231,11 @@ export async function renderPit(root: HTMLElement, editTeam?: number) {
                     ),
         )
         .join("");
-    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">PIT SCOUTING / ${esc(GAME.season)}</p><h1>Pit scouting</h1><p class="lede">One record per team. Routes, capabilities and the plan behind the numbers.</p></div><span class="quiet" id="draft-status">Draft autosaves on this device</span></div><ol class="steps" aria-label="Pit scouting steps">${["Team information", "Auto field positions", "Robot analysis"].map((s, i) => `<li${step === i + 1 ? ' aria-current="step"' : ""}><span>0${i + 1}</span>${s}</li>`).join("")}</ol><form id="pit-form"><div id="pit-error" class="errors" role="alert"></div>${
+    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">PIT SCOUTING / ${esc(GAME.season)}</p><h1>Pit scouting.</h1><p class="lede">One record per team. Routes, capabilities and the plan behind the numbers.</p></div><span class="quiet" id="draft-status">Draft autosaves on this device</span></div><ol class="steps" aria-label="Pit scouting steps">${["Team information", "Auto field positions", "Robot analysis"].map((s, i) => `<li${step === i + 1 ? ' aria-current="step"' : ""}><span>0${i + 1}</span>${s}</li>`).join("")}</ol><form id="pit-form"><div id="pit-error" class="errors" role="alert"></div>${
       step === 1
         ? section(
             "Team information",
-            `<div class="form-grid">${field("Team number *", "team", pit.team || "", "number", 'min="1" max="999999" required inputmode="numeric"')}${field("Team name *", "teamName", teamName, "text", 'required maxlength="100"')}${field("Time talked to", "talkedAt", pit.talkedAt, "time")}</div><p class="hint">Known names autofill from event data. An existing pit record opens for editing.</p>`,
+            `<div class="form-grid">${field("Team number *", "team", pit.team || "", "number", 'min="1" max="999999" required inputmode="numeric"')}${field("Team name *", "teamName", teamName, "text", 'required maxlength="100"')}${field("Scout name", "scout", pit.scout)}${field("Time talked to", "talkedAt", pit.talkedAt, "time")}</div><p class="hint">Known names autofill from event data. An existing pit record opens for editing.</p>`,
           )
         : step === 2
           ? (() => {

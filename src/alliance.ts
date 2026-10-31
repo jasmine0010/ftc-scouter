@@ -26,7 +26,7 @@ export function renderAlliance(
   candidate?: number,
 ) {
   if (event.teams.length < 2 || !event.teams.includes(settings.team)) {
-    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">ALLIANCE DESK</p><h1>Alliance</h1></div></div>${empty("Roster required", "Import the event roster and make sure our selected team number is included.")}<a class="button primary" href="#events">Event data →</a>`;
+    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">ALLIANCE DESK</p><h1>Alliance analysis.</h1></div></div>${empty("Roster required", "Import the event roster and make sure our selected team number is included.")}<a class="button primary" href="#events">Event data →</a>`;
     return;
   }
   const scheduled =
@@ -56,7 +56,7 @@ export function renderAlliance(
       pits = active(database.pits).filter((p) => p.eventId === event.id),
       a = pits.find((p) => p.team === settings.team),
       b = pits.find((p) => p.team === partner);
-    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">ALLIANCE DESK / OUR TEAM ${settings.team}</p><h1>Alliance</h1><p class="lede">Projected output, role coverage and the space you share.</p></div></div><nav class="tabs" aria-label="Alliance tools">${[
+    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">ALLIANCE DESK / OUR TEAM ${settings.team}</p><h1>Alliance analysis.</h1><p class="lede">Projected output, role coverage and the space you share.</p></div></div><nav class="tabs" aria-label="Alliance tools">${[
       ["partners", "Partners"],
       ["overlay", "Route overlay"],
       ["head", "Head to head"],
@@ -128,7 +128,7 @@ export function renderAlliance(
                       "Routes needed",
                       "Record at least one autonomous route for each team in Pit scouting.",
                     )
-              }<div class="button-row"><a class="button" href="#teams/pit/${settings.team}">Our pit record →</a><a class="button" href="#teams/pit/${partner}">Partner pit record →</a></div>`,
+              }<div class="button-row"><a class="button" href="#pit/${settings.team}">Our pit record →</a><a class="button" href="#pit/${partner}">Partner pit record →</a></div>`,
             )
           : tab === "head"
             ? section(

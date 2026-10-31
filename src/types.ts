@@ -134,7 +134,6 @@ export interface Settings {
   team: number;
   eventId: string;
   syncUrl: string;
-  scoutName?: string;
 }
 export interface Database {
   schemaVersion: 1;
