@@ -1,0 +1,14 @@
+{
+  "name": "curiosity-biobuzz-scout",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/dev.mjs",
+    "start": "node server.mjs",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": { "typescript": "5.9.3" }
+}
