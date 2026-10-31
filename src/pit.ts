@@ -42,7 +42,7 @@ export const pitSections: {
       ["leave", "LEAVE", "bool"],
       ["autoPark", "PARK", "bool"],
       ["attemptTip", "Attempts HIVE TIP", "bool"],
-      ["autoTipsAvg", "Average HIVE TIPs", "average"],
+      ["autoTipsAvg", "Average HIVE TIPs", "number"],
       ["autoTipsMax", "Maximum HIVE TIPs", "number"],
       ["autoLaunched", "Average elements launched", "average"],
       ["cellAvg", "Average elements left in a CELL", "average"],
@@ -54,7 +54,7 @@ export const pitSections: {
   {
     title: "TeleOp",
     fields: [
-      ["teleTipsAvg", "Average HIVE TIPs", "average"],
+      ["teleTipsAvg", "Average HIVE TIPs", "number"],
       ["teleTipsMax", "Maximum HIVE TIPs", "number"],
       ["gardenAvg", "Average GARDEN deliveries", "average"],
       ["flowersAvg", "Average FLOWER placements", "average"],
