@@ -112,7 +112,7 @@ OPR-style estimates minimize `||Ax-y||² + 0.6 ||x-prior||²` over alliance scor
 
 Pit priors carry `3 / (3 + match count)` weight. Unknown teams have no invented high-performance prior. Forecasts use observed scoring variation, reliability, role coverage and movement probabilities; they are estimates, not referee scores. Partner rankings add role complementarity, observed pairing-fit ratings and a route-overlap deduction. Head-to-head output accounts approximately for the finite shared end-state pool and opponent foul credits. Flower possession changes, defense, exact ball trajectories and timing are not a full game simulation.
 
-Route paths are vectors in nominal 0–144 inch field coordinates. The official image is cropped to its field bounds, desaturated for the team palette and annotated with labels. This supports scouting and overlays, not calibrated autonomous localization. Overlay markers detect line crossings/shared segments, without time or robot footprint; teams must review delays and clearance.
+Route paths are vectors in nominal 0–144 inch field coordinates. The complete official FIRST field image is shown in its original colors beneath vector routes. This supports scouting and overlays, not calibrated autonomous localization. Overlay markers detect line crossings/shared segments, without time or robot footprint; teams must review delays and clearance.
 
 ## Structure
 

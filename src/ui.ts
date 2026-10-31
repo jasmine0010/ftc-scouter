@@ -160,24 +160,14 @@ const routeMarkup = (routes: { route: Route; partner?: boolean }[]) =>
         .join(""),
     )
     .join("");
-/** Nominal-inch SVG: top-left origin, audience below, red left. See RULES-RESEARCH.md. */
+// Image bounds preserve the existing 0–144 inch route coordinate system.
+const FIELD_ARTWORK = { x: -58.07, y: -9.02, width: 260.14, height: 165.58 };
 export function fieldSVG(
   routes: { route: Route; partner?: boolean }[] = [],
   interactive = false,
 ) {
-  return `<svg ${interactive ? 'id="route-canvas"' : ""} class="field-map${interactive ? " drawable" : ""}" viewBox="-10 -10 164 169" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BIOBUZZ top-down field, 144 by 144 inches. Red left, blue right, audience below."><rect x="0" y="0" width="144" height="144" fill="#070302" stroke="#beb9b6" stroke-width=".6"/><defs><clipPath id="official-field-clip"><rect x="0" y="0" width="144" height="144"/></clipPath></defs><image href="/biobuzz-field.png" x="-58.07" y="-9.02" width="260.14" height="165.58" preserveAspectRatio="none" clip-path="url(#official-field-clip)" style="filter:grayscale(1) brightness(.4)"/>${[24, 48, 72, 96, 120].map((n) => `<path d="M${n} 0V144 M0 ${n}H144" fill="none" stroke="#342c2a" stroke-width=".35"/>`).join("")}<rect x="0" y="24" width="11" height="23" fill="#241d1b" stroke="#beb9b6" stroke-width=".5"/><rect x="133" y="97" width="11" height="23" fill="#241d1b" stroke="#beb9b6" stroke-width=".5"/><rect x="0" y="142" width="23" height="2" fill="#beb9b6"/><rect x="121" y="0" width="23" height="2" fill="#beb9b6"/><rect x="47.3" y="52.5" width="49.4" height="39" rx=".5" fill="none" stroke="#beb9b6" stroke-width=".8"/><path d="M60 54V90 M84 54V90" stroke="#beb9b6" stroke-width=".6"/>${[60, 84].map((x) => [56, 88].map((y) => `<rect x="${x - 7}" y="${y - 5}" width="14" height="10" fill="#241d1b" stroke="#beb9b6" stroke-width=".6"/>`).join("")).join("")}<g fill="#f3f1eb" font-family="Archivo,Arial,sans-serif" font-size="8" text-anchor="middle"><text x="60" y="74">R Hive</text><text x="84" y="74">B Hive</text><text x="18" y="35">R Load</text><text x="123" y="109">B Load</text><text x="16" y="138">R Garden</text><text x="127" y="8">B Garden</text><text x="72" y="155">Audience</text>${[12, 36, 60, 84, 108, 132].map((x, i) => `<text x="${x}" y="-4">${"ABCDEF"[i]}</text><text x="-5" y="${x}">${6 - i}</text>`).join("")}</g>${[
-    [48, 2],
-    [142, 48],
-    [96, 142],
-    [2, 96],
-  ]
-    .map(
-      ([x, y], i) =>
-        `<circle cx="${x}" cy="${y}" r="2" fill="#f3f1eb"/><text x="${x + (x < 5 ? 10 : x > 140 ? -10 : 0)}" y="${y < 5 ? 12 : y > 140 ? y - 6 : y - 5}" fill="#f3f1eb" font-family="Archivo,Arial,sans-serif" font-size="8" text-anchor="middle">F${i + 1}</text>`,
-    )
-    .join(
-      "",
-    )}<g id="route-paths">${routeMarkup(routes)}</g><g id="route-conflicts"></g></svg>`;
+  const { x, y, width, height } = FIELD_ARTWORK;
+  return `<svg ${interactive ? 'id="route-canvas"' : ""} class="field-map${interactive ? " drawable" : ""}" viewBox="${x} ${y} ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Official BIOBUZZ field"><image href="/biobuzz-field.png" x="${x}" y="${y}" width="${width}" height="${height}"/><g id="route-paths">${routeMarkup(routes)}</g><g id="route-conflicts"></g></svg>`;
 }
 export function bindDrawing(
   svg: SVGSVGElement,
@@ -237,8 +227,12 @@ export async function exportRoutePNG(svg: SVGSVGElement, name: string) {
     });
     sourceImage.setAttribute("href", data);
   }
-  clone.setAttribute("width", "1000");
-  clone.setAttribute("height", "1030");
+  const exportWidth = 1000;
+  const exportHeight = Math.round(
+    (exportWidth * svg.viewBox.baseVal.height) / svg.viewBox.baseVal.width,
+  );
+  clone.setAttribute("width", String(exportWidth));
+  clone.setAttribute("height", String(exportHeight));
   const xml = new XMLSerializer().serializeToString(clone),
     url = URL.createObjectURL(new Blob([xml], { type: "image/svg+xml" }));
   try {
@@ -246,12 +240,12 @@ export async function exportRoutePNG(svg: SVGSVGElement, name: string) {
     img.src = url;
     await img.decode();
     const canvas = document.createElement("canvas");
-    canvas.width = 1000;
-    canvas.height = 1030;
+    canvas.width = exportWidth;
+    canvas.height = exportHeight;
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, 1000, 1030);
-    ctx.drawImage(img, 0, 0, 1000, 1030);
+    ctx.fillRect(0, 0, exportWidth, exportHeight);
+    ctx.drawImage(img, 0, 0, exportWidth, exportHeight);
     const blob = await new Promise<Blob | null>((r) =>
       canvas.toBlob(r, "image/png"),
     );
