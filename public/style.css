@@ -3846,3 +3846,42 @@ td {
     --ui-scale: 0.6;
   }
 }
+
+/* Compact counter rows. */
+.counter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 12px;
+  gap: 8px;
+}
+.counter > span:first-child {
+  font-size: 18px;
+  line-height: 1.3;
+}
+.counter .stepper {
+  grid-template-columns: 40px 36px 40px;
+  gap: 8px;
+}
+.counter .stepper button {
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  font-size: 24px;
+}
+.counter .stepper input {
+  height: 40px;
+  min-height: 40px;
+  font-size: 28px;
+}
+@media (max-width: 700px) {
+  #scout-form .counter {
+    padding: 8px 6px;
+    gap: 6px;
+  }
+  #scout-form .counter .stepper {
+    grid-template-columns: 40px 32px 40px;
+    gap: 4px;
+  }
+}
