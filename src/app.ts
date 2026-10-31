@@ -123,6 +123,10 @@ async function start() {
   await initialize();
   if (!currentEvent()) throw new Error("No event exists in this dataset.");
   shell();
+  document.querySelector<HTMLAnchorElement>(".skip-link")!.onclick = (e) => {
+    e.preventDefault();
+    document.querySelector<HTMLElement>("#main")?.focus();
+  };
   onChange(updateStatus);
   window.addEventListener("hashchange", () => {
     if (location.hash === "#main") {
