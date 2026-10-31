@@ -79,7 +79,9 @@ export function counter(
   max = 999,
   step = 1,
 ) {
-  return `<label class="counter"><span>${esc(plainLabel(label))}</span><span class="stepper"><button type="button" data-step="-${step}" data-for="${esc(name)}" aria-label="Decrease ${esc(plainLabel(label))}">−</button><input type="number" inputmode="${step < 1 ? "decimal" : "numeric"}" name="${esc(name)}" value="${esc(value ?? 0)}" min="0" max="${max}" step="${step}" aria-label="${esc(plainLabel(label))}"><button type="button" data-step="${step}" data-for="${esc(name)}" aria-label="Increase ${esc(plainLabel(label))}">+</button></span></label>`;
+  const icon = (plus: boolean) =>
+    `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14${plus ? "M12 5v14" : ""}"/></svg>`;
+  return `<label class="counter"><span>${esc(plainLabel(label))}</span><span class="stepper"><button type="button" data-step="-${step}" data-for="${esc(name)}" aria-label="Decrease ${esc(plainLabel(label))}">${icon(false)}</button><input type="number" inputmode="${step < 1 ? "decimal" : "numeric"}" name="${esc(name)}" value="${esc(value ?? 0)}" min="0" max="${max}" step="${step}" aria-label="${esc(plainLabel(label))}"><button type="button" data-step="${step}" data-for="${esc(name)}" aria-label="Increase ${esc(plainLabel(label))}">${icon(true)}</button></span></label>`;
 }
 export function bindSteppers(root: HTMLElement) {
   const refresh = () =>
