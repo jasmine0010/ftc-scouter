@@ -231,11 +231,11 @@ export async function renderPit(root: HTMLElement, editTeam?: number) {
                     ),
         )
         .join("");
-    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">PIT SCOUTING / ${esc(GAME.season)}</p><h1>Pit scouting.</h1><p class="lede">One record per team. Routes, capabilities and the plan behind the numbers.</p></div><span class="quiet" id="draft-status">Draft autosaves on this device</span></div><ol class="steps" aria-label="Pit scouting steps">${["Team information", "Auto field positions", "Robot analysis"].map((s, i) => `<li${step === i + 1 ? ' aria-current="step"' : ""}><span>0${i + 1}</span>${s}</li>`).join("")}</ol><form id="pit-form"><div id="pit-error" class="errors" role="alert"></div>${
+    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">PIT SCOUTING / ${esc(GAME.season)}</p><h2>Pit Scouting</h2><p class="lede">One record per team. Routes, capabilities and the plan behind the numbers.</p></div><span class="quiet" id="draft-status">Draft autosaves on this device</span></div><ol class="steps" aria-label="Pit scouting steps">${["Team information", "Auto field positions", "Robot analysis"].map((s, i) => `<li${step === i + 1 ? ' aria-current="step"' : ""}><span>${i + 1}</span>${s}</li>`).join("")}</ol><form id="pit-form"><div id="pit-error" class="errors" role="alert"></div>${
       step === 1
         ? section(
             "Team information",
-            `<div class="form-grid">${field("Team number *", "team", pit.team || "", "number", 'min="1" max="999999" required inputmode="numeric"')}${field("Team name *", "teamName", teamName, "text", 'required maxlength="100"')}${field("Scout name", "scout", pit.scout)}${field("Time talked to", "talkedAt", pit.talkedAt, "time")}</div><p class="hint">Known names autofill from event data. An existing pit record opens for editing.</p>`,
+            `<div class="form-grid">${field("Scouter name", "scout", pit.scout)}${field("Team name", "teamName", teamName, "text", 'required maxlength="100"')}${field("Team ID", "team", pit.team || "", "number", 'min="1" max="999999" required inputmode="numeric"')}${field("Time talked to", "talkedAt", pit.talkedAt, "time")}</div><p class="hint">Known names autofill from event data. An existing pit record opens for editing.</p>`,
           )
         : step === 2
           ? (() => {
@@ -254,7 +254,7 @@ export async function renderPit(root: HTMLElement, editTeam?: number) {
                 ),
               )
               .join("")
-    }<div class="form-footer"><button type="button" id="pit-prev"${step === 1 ? " disabled" : ""}>← Previous</button><span>Step ${step} of 3</span>${step < 3 ? '<button class="primary" type="button" id="pit-next">Next →</button>' : '<button class="primary" type="submit">Save pit record</button>'}</div></form>`;
+    }<div class="form-footer"><button type="button" id="pit-prev"${step === 1 ? " disabled" : ""}>← Previous</button><span>Step ${step} of 3</span>${step < 3 ? '<button class="primary" type="button" id="pit-next">Next →</button>' : '<button class="primary" type="submit">Save All Data</button>'}</div></form>`;
     const form = root.querySelector<HTMLFormElement>("#pit-form")!;
     bindSteppers(form);
     form.oninput = () => {

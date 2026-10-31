@@ -16,17 +16,16 @@ import { renderCoverage, renderDirectory, renderProfile } from "./profiles.js";
 import { renderAlliance } from "./alliance.js";
 import { renderEventData } from "./event-data.js";
 import { renderReference } from "./reference.js";
+import { cleanView } from "./presentation.js";
 import { esc, toast } from "./ui.js";
 const app = document.querySelector<HTMLElement>("#app")!;
 const navigation = [
-  ["rankings", "01", "Rankings & data"],
-  ["scout", "02", "Scout form"],
-  ["pit", "03", "Pit scouting"],
-  ["teams", "04", "Team profiles"],
-  ["alliance", "05", "Alliance desk"],
-  ["events", "06", "Event data"],
-  ["reference", "07", "Reference"],
+  ["scout", "Scout Form"],
+  ["pit", "Pit Scouting"],
+  ["rankings", "Rankings & Data"],
+  ["teams", "Team Profiles"],
 ];
+let viewObserver: MutationObserver | undefined;
 function currentEvent(): Event {
   return (
     active(database.events).find((e) => e.id === settings.eventId) ??
@@ -35,24 +34,21 @@ function currentEvent(): Event {
 }
 function shell() {
   const parts = location.hash.replace(/^#\/?/, "").split("/"),
-    view = parts[0] || "rankings",
+    view = parts[0] || "scout",
     event = currentEvent();
-  app.innerHTML = `<header class="site-header"><a class="brand" href="#rankings" aria-label="Curiosity Scout event overview"><img src="/team-logo.svg" width="44" height="44" alt=""><span>Curiosity<small>11770 <span class="brand-divider">/</span> Scout</small></span></a><div class="header-center"><span>BIOBUZZ</span><span>2026—27</span></div><div class="header-status"><span id="sync-status" role="status"></span><button id="menu-toggle" aria-controls="sidebar" aria-expanded="false">Menu +</button></div></header><div class="app-layout"><aside class="sidebar" id="sidebar"><nav aria-label="Main navigation">${navigation.map(([key, index, label]) => `<a href="#${key}"${view === key || (view === "team" && key === "teams") || (view === "coverage" && key === "pit") ? ' aria-current="page"' : ""}><span>${index}</span>${label}</a>`).join("")}</nav><div class="sidebar-bottom"><p>OUR TEAM</p><strong id="our-team-label">${settings.team}</strong><a href="#team/${settings.team}">Open profile ↗</a><div class="manual-label">COMPETITION MANUAL<br>TU07 / 29 OCT 2026</div></div></aside><div class="workspace"><div class="event-bar"><label><span>EVENT</span><select id="event-select" aria-label="Current event">${active(
+  viewObserver?.disconnect();
+  const selected =
+    view === "team" ? "teams" : view === "coverage" ? "pit" : view;
+  app.innerHTML = `<header class="hub-header"><a href="#scout" class="hub-title"><img src="/team-logo.svg" width="36" height="36" alt=""><h1>FTC BIOBUZZ Scout Hub</h1></a><nav class="hub-nav" aria-label="Main navigation">${navigation.map(([key, label]) => `<a href="#${key}"${selected === key ? ' aria-current="page"' : ""}>${label}</a>`).join("")}</nav><div class="hub-context"><span id="sync-status" class="sync-dot" role="img"></span><details class="event-tools"><summary aria-label="Event tools"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="7" cy="18" r="2"/></svg></summary><div class="tools-panel"><label class="field"><span>Event</span><select id="event-select" aria-label="Current event">${active(
     database.events,
   )
     .map(
-      (e) =>
-        `<option value="${esc(e.id)}"${e.id === event.id ? " selected" : ""}>${esc(e.name)}</option>`,
+      (item) =>
+        `<option value="${esc(item.id)}"${item.id === event.id ? " selected" : ""}>${esc(item.name)}</option>`,
     )
     .join(
       "",
-    )}</select></label><div class="event-meta"><span>${event.id.startsWith("demo-") ? "DEMO DATA · SYNTHETIC" : ""}</span><label>OUR TEAM <input id="our-team" type="number" value="${settings.team}" min="1" max="999999" aria-label="Our team number"></label></div></div><main id="main" tabindex="-1"></main><footer class="app-footer"><span>Curiosity / FTC ${settings.team}</span><span>Local-first scouting · BIOBUZZ 2026–27</span><a href="#reference">Rules & sources ↗</a></footer></div></div>`;
-  const menu = document.querySelector<HTMLButtonElement>("#menu-toggle")!;
-  menu.onclick = () => {
-    const expanded = menu.getAttribute("aria-expanded") === "true";
-    menu.setAttribute("aria-expanded", String(!expanded));
-    document.querySelector("#sidebar")!.classList.toggle("open", !expanded);
-  };
+    )}</select></label><label class="field"><span>Our team</span><input id="our-team" type="number" value="${settings.team}" min="1" max="999999" aria-label="Our team number"></label><nav aria-label="Event tools"><a href="#alliance">Alliance</a><a href="#rankings/standings">Standings</a><a href="#rankings/simulator">Rank simulator</a><a href="#coverage">Pit coverage</a><a href="#events">Event data</a><a href="#reference">Reference</a></nav></div></details></div></header><main id="main" tabindex="-1" class="hub-main"></main>`;
   document.querySelector<HTMLSelectElement>("#event-select")!.onchange = async (
     e,
   ) => {
@@ -69,6 +65,8 @@ function shell() {
     shell();
   };
   const main = document.querySelector<HTMLElement>("#main")!;
+  viewObserver = new MutationObserver(() => cleanView(main));
+  viewObserver.observe(main, { childList: true, subtree: true });
   try {
     if (view === "scout") void renderScout(main, parts[1]).catch(failure);
     else if (view === "pit")
@@ -91,14 +89,17 @@ function shell() {
   } catch (e) {
     failure(e);
   }
+  cleanView(main);
   updateStatus();
 }
 function updateStatus() {
   const e = document.querySelector("#sync-status");
-  if (e)
-    e.textContent =
-      persistenceError ||
-      (!navigator.onLine ? "Offline · saved locally" : syncState);
+  if (e) {
+    const state =
+      persistenceError || (!navigator.onLine ? "Offline" : syncState);
+    e.setAttribute("aria-label", state);
+    e.setAttribute("data-state", state === "Synced" ? "synced" : "pending");
+  }
   const eventSelect =
     document.querySelector<HTMLSelectElement>("#event-select");
   if (eventSelect) {

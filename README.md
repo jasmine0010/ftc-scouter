@@ -19,12 +19,14 @@ npm test
 npm run build
 ```
 
-The first visit seeds **two synthetic events, 16 teams, 72 scheduled matches, 144 observations, 19 pit records, routes and pick lists**. Real team numbers are used only to make data entry recognizable; all non-Curiosity names, performance, notes and results are fictitious. The event bar identifies demo data. Create a new empty event in Event data for actual scouting; demo and real events remain separate.
+The first visit seeds **two synthetic events, 16 teams, 72 scheduled matches, 144 observations, 19 pit records, routes and pick lists**. Real team numbers are used only to make data entry recognizable; all non-Curiosity names, performance, notes and results are fictitious. Synthetic events are identified by their demo event IDs in exports. Create a new empty event in Event data for actual scouting; demo and real events remain separate.
 
 ## Screens
 
-- **Rankings & data:** sortable/filterable team analytics, official qualification standings, match log and schedule, and an 800-run remaining-match rank simulator.
-- **Scout form:** AUTO → TELEOP → review; one canonical observation per team/match/event, accessible steppers, explicit early-NECTAR fouls, breakdowns, loading notes and compatibility observations. A separate shared field-outcome editor records four FLOWERs plus both CELL and GARDEN totals.
+The four top tabs follow the previous scouter: Scout Form, Pit Scouting, Rankings & Data, Team Profiles. Event tools in the header contains event selection, our team number, Alliance, standings, the rank simulator, pit coverage, imports and Reference.
+
+- **Rankings & data:** Teams and Matches views with shared filters and sortable tables. Match records include score breakdowns and the event schedule.
+- **Scout form:** one scrolling form in the legacy section order, with a live score above it and Submit Match Data below; one canonical observation per team/match/event, accessible steppers, explicit early-NECTAR fouls, breakdowns, loading notes and compatibility observations. A separate shared field-outcome editor records four FLOWERs plus both CELL and GARDEN totals.
 - **Pit scouting:** team info → vector field drawing → questionnaire, in the old section sequence. Known teams autofill; existing pit records open for editing. Every quantity is numeric. Photos compress to JPEG at up to 1000px. Named routes support touch/stylus, undo, clear and PNG export.
 - **Team profiles:** category mean/median/best/population SD, selectable category trends, OPR-style comparison, pit/match disagreements, pit answers, route drawings, notes and optional online FTCScout enrichment. Season view combines match evidence and notes across events; OPR stays event-specific.
 - **Alliance desk:** partner projections and RP probabilities, role complementarity, route overlays, four-team head-to-head simulation, editable pick tiers, taken/available status, drag ordering and keyboard reorder buttons.
@@ -44,7 +46,7 @@ The first visit seeds **two synthetic events, 16 teams, 72 scheduled matches, 14
 
 Event data overrides the SWARM / POLLINATOR thresholds separately for each event. Championship values are not silently guessed. Rankings follow Table 13-1: average RP, average alliance score excluding foul credits, average TIPs, average AUTO, then random ordering. The app marks otherwise exact ties provisional because FIRST's random tie key is unavailable. Surrogate matches are excluded; DQs receive zero in all sort criteria.
 
-Fouls add to the opponent's official score. Robot statistics display **earned contribution**, **fouls conceded**, and separately labeled **net impact**. Never subtract fouls from the official score of the committing alliance.
+Fouls add to the opponent's official score. The form displays earned points with an Auto/Teleop/End breakdown; fouls remain separate in match data. Never subtract fouls from the official score of the committing alliance.
 
 ## Actions versus final state
 

@@ -285,6 +285,7 @@ test("CSV roundtrip preserves photos, vectors, multiline notes and quotes", () =
   const db = seedDatabase();
   db.notes[0].text = 'Line one, "quoted"\nLine two';
   db.pits[0].photo = "data:image/jpeg;base64,YWJj";
+  db.observations[0].autoLaunchPosition = "Far";
   const imported = datasetFromCSV(exportCSV(db));
   assert.deepEqual(imported, db);
   assert.deepEqual(parseCSV('a,b\r\n"x,y","z""q"\r\n'), [

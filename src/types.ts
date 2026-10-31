@@ -61,6 +61,7 @@ export interface Observation extends Entity {
   offense: number;
   defense: boolean;
   launchPosition: string;
+  autoLaunchPosition?: string;
   fixedPosition: boolean;
   compatibility: number;
   loadingNotes: string;

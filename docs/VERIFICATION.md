@@ -9,7 +9,7 @@
 
 ## Browser checks
 
-Tested through the desktop app browser at **390 × 844** and **1280 × 900**.
+The initial implementation was tested through the desktop app browser at **390 × 844** and **1280 × 900**. The legacy-format revision was checked at **375 × 812** and **1280 × 900**.
 
 - Match counter + HIVE TIP / LEAVE updates live score to 23; phone layout has no document-level horizontal overflow.
 - Match draft survives reload. Stopped the server and reloaded: cached app and saved draft remain available, and sync correctly changes to pending. Restarted the server afterward.
@@ -21,6 +21,15 @@ Tested through the desktop app browser at **390 × 844** and **1280 × 900**.
 - Rank simulator shows a non-degenerate final-rank histogram and remaining-match count.
 - Complete JSON and CSV export and re-import through the file chooser succeeds without duplicate records; original event observation counts remain 96 and 48.
 - Missing FTC API credentials produce the explicit CSV/environment fallback message.
+
+## Legacy-format revision
+
+- Four top tabs match the old scouter; the default page is the full scrolling match form.
+- Parking and bottom bonus update the live and calculated score from 23 to 33. Blue alliance and both scoring changes survive reload; values were restored after checking.
+- Team 11770 filter produces one aggregate row and persists into Matches, showing its six observations. Clear Filters restores all entries.
+- Known pit lookup opens Curiosity; Next reaches vector drawing, then questionnaire sections in order, ending with Save All Data. No match or pit submission was made.
+- Phone questionnaire has no document overflow. Controls, labels, table rows, headings and profile cards were inspected in the browser.
+- CSV round-trip fixture includes the independent autonomous shooting position.
 
 ## Limits of verification
 

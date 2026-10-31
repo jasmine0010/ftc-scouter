@@ -26,14 +26,14 @@ export function renderDirectory(root: HTMLElement, event: Event) {
         event.teams.includes(t.number) &&
         `${t.number} ${t.name}`.toLowerCase().includes(query.toLowerCase()),
     );
-    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">TEAM DATABASE / ${event.teams.length} TEAMS</p><h1>Team profiles.</h1><p class="lede">Match evidence, pit capabilities and the notes that numbers miss.</p></div><a class="button primary" href="#pit">Add pit record →</a></div><div class="toolbar">${field("Search team number or name", "directory-search", query, "search")}<a class="text-link" href="#coverage">Pit coverage →</a></div><div class="team-directory">${
+    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">TEAM DATABASE / ${event.teams.length} TEAMS</p><h2>Team Profiles</h2><p class="lede">Match evidence, pit capabilities and the notes that numbers miss.</p></div><a class="button primary" href="#pit">Add pit record →</a></div><div class="toolbar">${field("Search team number or name", "directory-search", query, "search")}<a class="text-link" href="#coverage">Pit coverage →</a></div><div class="team-directory">${
       teams
         .map((t) => {
           const s = teamStats(database, t.number, event.id),
             p = active(database.pits).find(
               (p) => p.team === t.number && p.eventId === event.id,
             );
-          return `<a href="#team/${t.number}" class="team-row"><span class="team-no">${t.number}</span><span><strong>${esc(t.name)}</strong><small>${p ? "Pit record complete" : "Pit record needed"}</small></span><span><b>${s.obs.length ? fmt(s.total.average) : "—"}</b><small>Avg earned</small></span><span><b>${s.obs.length}</b><small>Matches</small></span><span class="arrow">↗</span></a>`;
+          return `<article class="team-card"><h3>${t.number}</h3><strong>${esc(t.name)}</strong><dl><div><dt>Matches</dt><dd>${s.obs.length}</dd></div><div><dt>Pit profiles</dt><dd>${p ? 1 : 0}</dd></div><div><dt>Average score</dt><dd>${s.obs.length ? fmt(s.total.average) : "—"}</dd></div></dl><a href="#team/${t.number}" class="button">View Profile</a></article>`;
         })
         .join("") ||
       empty(
@@ -151,11 +151,52 @@ export function renderProfile(
       fmt(x.sd),
     ]),
   ];
-  root.innerHTML = `<a href="#teams" class="back-link">← Team profiles</a><div class="page-heading"><div><p class="eyebrow">TEAM ${team}${team === settings.team ? " / OUR TEAM" : ""}</p><h1>${esc(t.name)}</h1><p class="lede">${season ? "Season-long evidence" : "Event evidence"} · ${s.obs.length} scouted matches · ${pct(s.reliability)} matches without breakdown</p></div><div class="button-row"><button id="season-toggle">${season ? "This event" : "Season view"}</button><a class="button primary" href="#pit/${team}">${pit ? "Edit pit record" : "Scout this pit"} →</a></div></div><div class="stat-row">${[
-    ["Avg earned", s.obs.length ? fmt(s.total.average) : "—"],
-    ["Median", s.obs.length ? fmt(s.total.median) : "—"],
-    ["Best", s.obs.length ? fmt(s.total.best) : "—"],
-    ["Std deviation", s.obs.length ? fmt(s.total.sd) : "—"],
+  root.innerHTML = `<a href="#teams" class="back-link">← Team profiles</a><div class="page-heading"><div><p class="eyebrow">TEAM ${team}${team === settings.team ? " / OUR TEAM" : ""}</p><h2>${team} · ${esc(t.name)}</h2><p class="lede">${season ? "Season-long evidence" : "Event evidence"} · ${s.obs.length} scouted matches · ${pct(s.reliability)} matches without breakdown</p></div><div class="button-row"><button id="season-toggle">${season ? "This event" : "Season view"}</button><a class="button primary" href="#pit/${team}">${pit ? "Edit pit record" : "Scout this pit"} →</a></div></div><div class="stat-row profile-summary">${[
+    ["Avg score", s.obs.length ? fmt(s.total.average) : "—"],
+    ["Auto avg", s.obs.length ? fmt(s.auto.average) : "—"],
+    [
+      "TeleOp avg",
+      s.obs.length
+        ? fmt(
+            mean(
+              s.scores.map(
+                (score) =>
+                  score.tele -
+                  score.categories.telePark -
+                  score.categories.bottom,
+              ),
+            ),
+          )
+        : "—",
+    ],
+    [
+      "End game avg",
+      s.obs.length
+        ? fmt(
+            mean(
+              s.scores.map(
+                (score) => score.categories.telePark + score.categories.bottom,
+              ),
+            ),
+          )
+        : "—",
+    ],
+    [
+      "Avg elements",
+      s.obs.length
+        ? fmt(
+            mean(
+              s.obs.map(
+                (observation) =>
+                  observation.auto.pollen +
+                  observation.auto.nectar +
+                  observation.tele.pollen +
+                  observation.tele.nectar,
+              ),
+            ),
+          )
+        : "—",
+    ],
   ]
     .map(
       ([label, value]) =>
@@ -171,34 +212,27 @@ export function renderProfile(
   )}</div></section><section class="section"><header class="section-head"><h2>Contribution estimate</h2></header><div class="comparison-numbers"><span><b>${fmt(opr.values[team] ?? 0)}</b>OPR-style</span><span><b>${fmt(teamStats(database, team, event.id).total.average)}</b>Scouted average</span></div><p class="hint">Event ridge least squares · ${opr.rows} alliance results. Difference ${fmt((opr.values[team] ?? 0) - teamStats(database, team, event.id).total.average)} points. Alliance end-state credit and shared roles can explain disagreement. ${season ? "OPR remains event-specific." : ""}</p></section></div>${section("Scoring distribution", table(["Category", "Average", "Median", "Best", "Std dev"], statsRows, "Scoring category statistics"), "Population standard deviation. Empty samples show zero; no unobserved match is counted as a zero.")}${section(
     "Scouted matches",
     table(
-      [
-        "Match",
-        "Alliance",
-        "Earned",
-        "AUTO",
-        "TELEOP",
-        "Fouls",
-        "HIVE TIPs",
-        "Note",
-        "",
-      ],
-      s.obs.map((o) => {
-        const x = scoreObservation(o);
-        return [
-          String(o.match),
-          esc(o.alliance),
-          fmt(x.total, 0),
-          fmt(x.auto, 0),
-          fmt(x.tele, 0),
-          fmt(x.penalties, 0),
-          String(x.tips),
-          esc(o.note),
-          `<a class="text-link" href="#scout/${esc(o.id)}">Edit →</a>`,
-        ];
-      }),
+      ["Match", "Alliance", "Score", "Sort"],
+      s.obs.map((observation) => [
+        `<a href="#scout/${esc(observation.id)}">${observation.match}</a>`,
+        observation.alliance === "red" ? "Red" : "Blue",
+        fmt(scoreObservation(observation).total, 0),
+        observation.canSort ? "Yes" : "No",
+      ]),
       "Team matches",
     ),
   )}${section("Capabilities observed", `<div class="metric-line"><span>Sort / own NECTAR ${pct(mean(s.obs.map((o) => +o.canSort)))}</span><span>Compatibility ${fmt(mean(s.obs.map((o) => o.compatibility)))} / 5</span><span>Offense ${fmt(mean(s.obs.map((o) => o.offense)))} / 5</span><span>Defense ${pct(mean(s.obs.map((o) => +o.defense)))}</span><span>Fixed position ${pct(mean(s.obs.map((o) => +o.fixedPosition)))}</span></div>`)}${section("Pit scouting", pit ? `<div class="pit-heading"><p>${esc(pit.scout || "Scout not recorded")} · ${esc(pit.talkedAt || "Interview time not recorded")} · ${esc(new Date(pit.updatedAt).toLocaleDateString())}</p><a class="text-link" href="#pit/${team}">Edit record →</a></div>${pit.photo ? `<img class="robot-photo" src="${esc(pit.photo)}" alt="Team ${team} robot">` : ""}<div class="pit-readout">${pitSections.map((sec) => `<details><summary>${esc(sec.title)}</summary><dl>${sec.fields.map(([k, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(typeof pit.answers[k] === "boolean" ? (pit.answers[k] ? "Yes" : "No") : (pit.answers[k] ?? "Not recorded"))}</dd></div>`).join("")}</dl></details>`).join("")}</div>${pit.routes.length ? `<div class="route-readout">${pit.routes.map((r) => `<figure>${fieldSVG([{ route: r }])}<figcaption>${esc(r.label)} · ${esc(r.start)}<button data-route-png="${esc(r.id)}">Export PNG</button></figcaption></figure>`).join("")}</div><a class="text-link" href="#alliance/overlay/${team}">Overlay with our route →</a>` : '<p class="muted">No autonomous routes recorded.</p>'}` : empty("No pit record yet", "Use pit scouting to record capabilities, routes and the last-minute plan."))}${section("Team notes", `<div class="section-actions"><button class="primary" id="add-note">Add note</button></div>${notes.map((n) => `<article class="note"><p>${esc(n.text)}</p><small>${esc(n.author || "Scout")} · ${esc(new Date(n.updatedAt).toLocaleString())}</small></article>`).join("") || '<p class="muted">No team notes yet.</p>'}`)}${section("External FTCScout data", `<button id="load-external">Load season statistics & awards</button><a class="text-link" target="_blank" rel="noreferrer" href="https://ftcscout.org/teams/${team}">Open FTCScout ↗</a><div id="external-data"><p class="hint">Optional online enrichment is kept separate from local scouting evidence.</p></div>`)}`;
+  const analysis = document.createElement("details");
+  analysis.className = "profile-analysis";
+  analysis.innerHTML = "<summary>Match analysis</summary>";
+  const chart = root.querySelector(".analysis-split");
+  if (chart) analysis.append(chart);
+  root.querySelectorAll(":scope > .section").forEach((section) => {
+    const title = section.querySelector(".section-head")?.textContent?.trim();
+    if (title === "Scoring distribution" || title === "Capabilities observed")
+      analysis.append(section);
+  });
+  root.append(analysis);
   root.querySelector<HTMLSelectElement>("#trend-category")!.onchange = (e) => {
     const key = (e.target as HTMLSelectElement).value;
     root.querySelector("#team-trend")!.innerHTML = sparkline(
