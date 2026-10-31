@@ -15,4 +15,4 @@ Reference inspected before implementation: `../curiosity11770`, especially `READ
 
 Use TypeScript modules and DOM rendering with no runtime framework; a minimal TypeScript build replaces Python page generation because this is a stateful application. Preserve static deployment and a Node-standard-library server. Reuse the original team SVG logo. Use the exact palette and Archivo family, with smaller technical typography for dense tables and thumb-friendly 44px controls. No new decorative accent colors, gradients, glass effects, rounded cards, or icon grids.
 
-The team site loads Archivo from Google Fonts and has no local font files. Font files will be bundled if available; otherwise Arial is the explicit offline fallback, and no external font is required for the app to work.
+The team site loads Archivo from Google Fonts and has no local font files. The app now bundles Archivo 400/500/600 and its SIL license locally. Arial remains the fallback. No external font request is required.
