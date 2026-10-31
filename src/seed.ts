@@ -9,30 +9,30 @@ import {
   type Match,
   type Pit,
 } from "./types.js";
+export const DEMO_STAMP = "2026-10-30T12:00:00.000Z";
+export const DEMO_TEAMS: [number, string][] = [
+  [11770, "Curiosity"],
+  [24079, "Circuit Breakers"],
+  [21380, "Vector Mechanics"],
+  [3526, "Torque Theory"],
+  [30110, "Redshift"],
+  [26504, "Parallel Motion"],
+  [9881, "Copper Circuit"],
+  [15046, "Afterburn"],
+  [23564, "Signal Theory"],
+  [20406, "Kinetic Union"],
+  [19198, "Orbit Robotics"],
+  [13277, "Drive Current"],
+  [21930, "Static Friction"],
+  [21830, "Phase Shift"],
+  [30099, "Arc Assembly"],
+  [6371, "Northstar"],
+];
+/** Synthetic fixture for tests; never used to initialize the live database. */
 export function seedDatabase(): Database {
-  const stamp = "2026-10-30T12:00:00.000Z",
-    numbers = [
-      11770, 24079, 21380, 3526, 30110, 26504, 9881, 15046, 23564, 20406, 19198,
-      13277, 21930, 21830, 30099, 6371,
-    ];
-  const names = [
-    "Curiosity",
-    "Circuit Breakers",
-    "Vector Mechanics",
-    "Torque Theory",
-    "Redshift",
-    "Parallel Motion",
-    "Copper Circuit",
-    "Afterburn",
-    "Signal Theory",
-    "Kinetic Union",
-    "Orbit Robotics",
-    "Drive Current",
-    "Static Friction",
-    "Phase Shift",
-    "Arc Assembly",
-    "Northstar",
-  ];
+  const stamp = DEMO_STAMP,
+    numbers = DEMO_TEAMS.map(([number]) => number),
+    names = DEMO_TEAMS.map(([, name]) => name);
   const e: Event = {
     id: "demo-la",
     updatedAt: stamp,

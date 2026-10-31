@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { mergeDatabases, validateDatabase } from "./dist/assets/storage.js";
+import { removePlaceholderData } from "./dist/assets/data-cleanup.js";
 const root = path.dirname(fileURLToPath(import.meta.url)),
   dist = path.join(root, "dist"),
   data = path.join(root, ".data");
@@ -61,7 +62,7 @@ const server = http.createServer(async (req, res) => {
         } catch (e) {
           if (e.code !== "ENOENT") throw e;
         }
-        const merged = mergeDatabases(saved, input);
+        const merged = removePlaceholderData(mergeDatabases(saved, input));
         await writeFile(path.join(data, "store.json"), JSON.stringify(merged));
         return merged;
       });

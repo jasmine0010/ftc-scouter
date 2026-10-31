@@ -19,7 +19,7 @@ npm test
 npm run build
 ```
 
-The first visit seeds **two synthetic events, 16 teams, 72 scheduled matches, 144 observations, 19 pit records, routes and pick lists**. Real team numbers are used only to make data entry recognizable; all non-Curiosity names, performance, notes and results are fictitious. Synthetic events are identified by their demo event IDs in exports. Create a new empty event in Event data for actual scouting; demo and real events remain separate.
+The first visit starts with Curiosity (11770) and an empty event. Import an event roster and schedule in Event data. Legacy placeholder teams and their sample records are retired automatically; deletion markers prevent older devices or exports from restoring them. The synthetic dataset in `src/seed.ts` is retained only as a test fixture.
 
 ## Screens
 

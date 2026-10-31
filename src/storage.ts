@@ -1,4 +1,8 @@
-import { seedDatabase } from "./seed.js";
+import {
+  createDatabase,
+  placeholderTeams,
+  removePlaceholderData,
+} from "./data-cleanup.js";
 import {
   collections,
   active,
@@ -14,7 +18,7 @@ let handle: IDBDatabase;
 export let database: Database;
 export let settings: Settings = {
   team: 11770,
-  eventId: "demo-la",
+  eventId: "local-event",
   syncUrl: "/api/sync",
 };
 export let persistenceError = "";
@@ -48,9 +52,18 @@ export async function initialize() {
     r.onsuccess = () => resolve(r.result);
     r.onerror = () => reject(r.error);
   });
-  database = (await get<Database>("database")) ?? seedDatabase();
+  database = (await get<Database>("database")) ?? createDatabase();
   settings = (await get<Settings>("settings")) ?? settings;
   await persist();
+  if (!active(database.events).some((event) => event.id === settings.eventId))
+    await saveSettings({ eventId: active(database.events)[0].id });
+  const removed = placeholderTeams(database);
+  for (const event of database.events) {
+    const pit = await readDraft<{ pit: { team: number } }>(`pit:${event.id}`);
+    if (pit && removed.has(pit.pit.team)) await clearDraft(`pit:${event.id}`);
+    const match = await readDraft<Observation>(`match:${event.id}`);
+    if (match && removed.has(match.team)) await clearDraft(`match:${event.id}`);
+  }
 }
 export async function persist() {
   try {
@@ -59,9 +72,9 @@ export async function persist() {
         store = tx.objectStore("state"),
         q = store.get("database");
       q.onsuccess = () => {
-        database = q.result
-          ? mergeDatabases(q.result as Database, database)
-          : database;
+        database = removePlaceholderData(
+          q.result ? mergeDatabases(q.result as Database, database) : database,
+        );
         store.put(database, "database");
       };
       tx.oncomplete = () => resolve();
