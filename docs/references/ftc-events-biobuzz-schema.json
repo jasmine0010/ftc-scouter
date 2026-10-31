@@ -1,0 +1,418 @@
+{
+  "source": "https://ftc-events.firstinspires.org/swagger/v2.0/swagger.json",
+  "verified": "2026-10-30",
+  "ScoreDetailModel_2026": {
+    "title": "BioBuzz Alliance Score Details",
+    "type": "object",
+    "properties": {
+      "matchLevel": {
+        "$ref": "#/components/schemas/FTCEventLevel"
+      },
+      "matchSeries": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "matchNumber": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "randomization": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "alliances": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ScoreDetailAllianceModel_2026"
+        },
+        "nullable": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "ScoreDetailAllianceModel_2026": {
+    "title": "BioBuzz Alliance Score Breakdown",
+    "type": "object",
+    "properties": {
+      "autoHiveTips": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "autoRobot1Leave": {
+        "type": "boolean"
+      },
+      "autoRobot2Leave": {
+        "type": "boolean"
+      },
+      "autoRobot1Park": {
+        "type": "boolean"
+      },
+      "autoRobot2Park": {
+        "type": "boolean"
+      },
+      "autoLeavePoints": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "autoParkPoints": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "autoHivePoints": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "teleopHiveTips": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "teleopHivePollenNectar": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "redAllianceFlower": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/BiobuzzScoringElement"
+        },
+        "nullable": true
+      },
+      "scoringFlower": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/BiobuzzScoringElement"
+        },
+        "nullable": true
+      },
+      "blueAllianceFlower": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/BiobuzzScoringElement"
+        },
+        "nullable": true
+      },
+      "audienceFlower": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/BiobuzzScoringElement"
+        },
+        "nullable": true
+      },
+      "teleopGardenPollenNectar": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "teleopRobot1Park": {
+        "type": "boolean"
+      },
+      "teleopRobot2Park": {
+        "type": "boolean"
+      },
+      "teleopHivePoints": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "teleopFlowerPoints": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "teleopGardenPoints": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "teleopParkPoints": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "autoPoints": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "teleopPoints": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "foulPointsCommitted": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "preFoulTotal": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "swarmRP": {
+        "type": "boolean"
+      },
+      "pollinator1RP": {
+        "type": "boolean"
+      },
+      "pollinator2RP": {
+        "type": "boolean"
+      },
+      "totalPoints": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "majorFouls": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "minorFouls": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "alliance": {
+        "type": "string",
+        "nullable": true
+      },
+      "team": {
+        "type": "integer",
+        "format": "int32"
+      }
+    },
+    "additionalProperties": false
+  },
+  "BiobuzzScoringElement": {
+    "enum": [
+      "RED_NECTAR",
+      "BLUE_NECTAR",
+      "POLLEN"
+    ],
+    "type": "string"
+  },
+  "FTCEventLevel": {
+    "enum": [
+      "PRACTICE",
+      "QUALIFICATION",
+      "SEMIFINAL",
+      "FINAL",
+      "PLAYOFF",
+      "OTHER"
+    ],
+    "type": "string"
+  },
+  "EventScheduleHybridModel_Version2": {
+    "title": "Hybrid Schedule",
+    "type": "object",
+    "properties": {
+      "schedule": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ScheduleHybridModel_Version2"
+        },
+        "nullable": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "ScheduleHybridModel_Version2": {
+    "title": "Hybrid Schedule Match",
+    "type": "object",
+    "properties": {
+      "description": {
+        "type": "string",
+        "nullable": true
+      },
+      "tournamentLevel": {
+        "type": "string",
+        "nullable": true
+      },
+      "series": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "matchNumber": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "startTime": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      },
+      "actualStartTime": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      },
+      "postResultTime": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      },
+      "videoURL": {
+        "type": "string",
+        "nullable": true
+      },
+      "scoreRedFinal": {
+        "type": "integer",
+        "format": "int32",
+        "nullable": true
+      },
+      "scoreRedFoul": {
+        "type": "integer",
+        "format": "int32",
+        "nullable": true
+      },
+      "scoreRedAuto": {
+        "type": "integer",
+        "format": "int32",
+        "nullable": true
+      },
+      "scoreBlueFinal": {
+        "type": "integer",
+        "format": "int32",
+        "nullable": true
+      },
+      "scoreBlueFoul": {
+        "type": "integer",
+        "format": "int32",
+        "nullable": true
+      },
+      "scoreBlueAuto": {
+        "type": "integer",
+        "format": "int32",
+        "nullable": true
+      },
+      "scoreBlueDriveControlled": {
+        "type": "integer",
+        "format": "int32",
+        "nullable": true
+      },
+      "scoreBlueEndgame": {
+        "type": "integer",
+        "format": "int32",
+        "nullable": true
+      },
+      "redWins": {
+        "type": "boolean",
+        "nullable": true
+      },
+      "blueWins": {
+        "type": "boolean",
+        "nullable": true
+      },
+      "teams": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ScheduleHybridModelTeam_Version2"
+        },
+        "nullable": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "ScheduleHybridModelTeam_Version2": {
+    "title": "Hybrid Schedule Team",
+    "type": "object",
+    "properties": {
+      "teamNumber": {
+        "type": "integer",
+        "format": "int32",
+        "nullable": true
+      },
+      "displayTeamNumber": {
+        "type": "string",
+        "nullable": true
+      },
+      "station": {
+        "type": "string",
+        "nullable": true
+      },
+      "surrogate": {
+        "type": "boolean"
+      },
+      "noShow": {
+        "type": "boolean"
+      },
+      "dq": {
+        "type": "boolean",
+        "nullable": true
+      },
+      "onField": {
+        "type": "boolean",
+        "nullable": true
+      },
+      "teamName": {
+        "type": "string",
+        "nullable": true
+      }
+    },
+    "additionalProperties": false
+  },
+  "TeamRankingModel": {
+    "title": "Team Ranking",
+    "type": "object",
+    "properties": {
+      "rank": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "teamNumber": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "displayTeamNumber": {
+        "type": "string",
+        "nullable": true
+      },
+      "teamName": {
+        "type": "string",
+        "nullable": true
+      },
+      "sortOrder1": {
+        "type": "number",
+        "format": "double"
+      },
+      "sortOrder2": {
+        "type": "number",
+        "format": "double"
+      },
+      "sortOrder3": {
+        "type": "number",
+        "format": "double"
+      },
+      "sortOrder4": {
+        "type": "number",
+        "format": "double"
+      },
+      "sortOrder5": {
+        "type": "number",
+        "format": "double"
+      },
+      "sortOrder6": {
+        "type": "number",
+        "format": "double"
+      },
+      "wins": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "losses": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "ties": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "qualAverage": {
+        "type": "number",
+        "format": "double"
+      },
+      "dq": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "matchesPlayed": {
+        "type": "integer",
+        "format": "int32"
+      },
+      "matchesCounted": {
+        "type": "integer",
+        "format": "int32"
+      }
+    },
+    "additionalProperties": false
+  }
+}
