@@ -202,7 +202,7 @@ export const blankObservation = (
   canSort: false,
   offense: 3,
   defense: false,
-  launchPosition: "Near",
+  launchPosition: "",
   fixedPosition: false,
   compatibility: 3,
   loadingNotes: "",

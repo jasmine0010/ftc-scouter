@@ -3289,3 +3289,6 @@ th:first-child {
   background: var(--red);
   border-color: var(--red);
 }
+.scout-form .robot-controls {
+  margin-top: 28px;
+}
