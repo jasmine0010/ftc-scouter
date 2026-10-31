@@ -3336,6 +3336,15 @@ dt,
 .calculated-score > span {
   color: var(--muted);
 }
+.field > span,
+.counter > span:first-child,
+.toggle > span:first-child,
+.yes-no-row > span,
+.alliance-selector legend {
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.35;
+}
 button,
 .button,
 input,
