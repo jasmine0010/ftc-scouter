@@ -1,4 +1,4 @@
-import { GAME, sumElements } from "./game.js";
+import { GAME } from "./game.js";
 import {
   scoreAlliance,
   scoreObservation,
@@ -28,157 +28,214 @@ import {
   field,
   formValues,
   fmt,
-  section,
   select,
-  textArea,
   toast,
   toggle,
 } from "./ui.js";
-export async function renderScout(root: HTMLElement, editId?: string) {
+
+type ScoutPhase = "auto" | "teleop" | "end";
+export async function renderScout(
+  root: HTMLElement,
+  editId?: string,
+  selectedMatch?: number,
+  selectedTeam?: number,
+) {
   const eventId = settings.eventId;
-  let o = structuredClone(
-    active(database.observations).find((x) => x.id === editId) ??
-      (!editId
-        ? await readDraft<Observation>(`match:${eventId}`)
-        : undefined) ??
-      blankObservation(
-        eventId,
-        settings.team,
-        active(database.matches)
-          .filter(
-            (m) =>
-              m.eventId === eventId &&
-              !m.played &&
-              [...m.red, ...m.blue].includes(settings.team),
-          )
-          .sort((a, b) => a.number - b.number)[0]?.number ?? 1,
-      ),
-  );
-  let period = "auto";
-  const capture = () => {
-    const f = root.querySelector<HTMLFormElement>("#scout-form");
-    if (!f) return;
-    const values = formValues(f);
-    for (const [k, v] of Object.entries(values)) {
-      if (k.startsWith("auto.") || k.startsWith("tele.")) {
-        const [p, key] = k.split(".");
-        (o[p as "auto" | "tele"] as unknown as Record<string, unknown>)[key] =
-          v;
-      } else (o as unknown as Record<string, unknown>)[k] = v;
-    }
-    o.offense = Number(o.offense);
-    o.compatibility = Number(o.compatibility);
-    void saveDraft(`match:${eventId}`, o);
-    updateScore();
-  };
-  const updateScore = () => {
-    const s = scoreObservation(o),
-      el = root.querySelector("#live-score");
-    if (el)
-      el.innerHTML = `<span>Earned contribution <strong>${fmt(s.total, 0)}</strong></span><span>AUTO ${fmt(s.auto, 0)}</span><span>TELEOP ${fmt(s.tele, 0)}</span><span>Fouls conceded ${s.penalties}</span><span>Net impact ${fmt(s.net, 0)}</span><span class="save-state">Draft saved locally</span>`;
-  };
-  function render() {
-    root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">MATCH SCOUTING / ${esc(eventId.startsWith("demo-") ? "DEMO EVENT" : "EVENT DATA")}</p><h1>Match scouting.</h1><p class="lede">Actions belong to a robot. Final field state belongs to the match.</p></div></div><div class="live-score" id="live-score" aria-live="polite"></div><form id="scout-form"><div class="errors" id="scout-error" role="alert"></div><div class="form-grid identity-grid">${field("Match number", "match", o.match, "number", 'min="1" required inputmode="numeric"')}${field("Team number", "team", o.team, "number", 'min="1" max="999999" required inputmode="numeric" list="team-options"')}${select(
-      "Alliance",
-      "alliance",
-      o.alliance,
-      [
-        ["red", "Red"],
-        ["blue", "Blue"],
-      ],
-    )}${field("Scout", "scout", o.scout)}</div><datalist id="team-options">${active(
-      database.teams,
+  const next = active(database.matches)
+    .filter(
+      (match) =>
+        match.eventId === eventId &&
+        !match.played &&
+        [...match.red, ...match.blue].includes(settings.team),
     )
-      .map((t) => `<option value="${t.number}">${esc(t.name)}</option>`)
-      .join(
-        "",
-      )}</datalist><div class="tabs phase-tabs" role="group" aria-label="Scouting period"><button type="button" data-period="auto" aria-pressed="${period === "auto"}">AUTO · ${GAME.limits.autoSeconds}s</button><button type="button" data-period="tele" aria-pressed="${period === "tele"}">TELEOP · ${GAME.limits.teleSeconds}s</button><button type="button" data-period="review" aria-pressed="${period === "review"}">Review & save</button></div>${(["auto", "tele"] as const).map((p) => `<div ${period !== p ? "hidden" : ""}>${section(p === "auto" ? "Autonomous" : "TeleOp", `<div class="scout-grid">${p === "auto" ? toggle("LEAVE", "auto.leave", o.auto.leave) : ""}${toggle("PARK", `${p}.park`, o[p].park)}${counter("HIVE TIPs credited", `${p}.tips`, o[p].tips)}${counter("POLLEN launched", `${p}.pollen`, o[p].pollen)}${counter("Own NECTAR launched", `${p}.nectar`, o[p].nectar)}${counter(p === "auto" ? "Elements left in CELL (diagnostic)" : "CELL elements retained · attributed", `${p}.cell`, o[p].cell, GAME.inventory.pollen + GAME.inventory.redNectar + GAME.inventory.blueNectar)}${counter("FLOWER elements placed", `${p}.flowerPlaced`, o[p].flowerPlaced ?? 0)}${counter("GARDEN elements delivered", `${p}.gardenDelivered`, o[p].gardenDelivered ?? 0)}${p === "tele" ? counter("Owned FLOWER elements · attributed", "tele.flower", o.tele.flower, GAME.inventory.pollen + GAME.inventory.redNectar + GAME.inventory.blueNectar) + counter("Final GARDEN elements · attributed", "tele.garden", o.tele.garden, GAME.inventory.pollen + GAME.inventory.redNectar + GAME.inventory.blueNectar) : ""}</div><p class="hint">Credit each cooperative TIP once. Cumulative launch counts can exceed field inventory through recycling.${p === "auto" ? " AUTO CELL, FLOWER and GARDEN counts are diagnostic and do not earn these end-state points." : " Cumulative placements and deliveries do not directly earn points. Enter attributed final retained elements separately and reconcile them against the shared field outcome."}</p>`)}</div>`).join("")}<div ${period !== "review" ? "hidden" : ""}>${section("Last minute & fouls", `<div class="scout-grid">${counter("Bottom NECTAR bonuses · attributed", "bottom", o.bottom, GAME.limits.flowers)}${counter("Minor fouls", "minor", o.minor)}${counter("Other major fouls", "major", o.major)}${counter("Early NECTAR in FLOWERs", "earlyNectar", o.earlyNectar)}${toggle("Breakdown / disabled", "breakdown", o.breakdown)}${counter("Downtime (seconds)", "downtime", o.downtime, GAME.limits.autoSeconds + GAME.limits.teleSeconds)}</div><p class="hint">Early NECTAR incurs ${GAME.points.major} points per element for the opponent. Do not count that same violation again under other major fouls.</p>`)}${section("Robot capabilities & compatibility", `<div class="form-grid">${select("Launch position", "launchPosition", o.launchPosition, ["Near", "Center", "Far", "Perimeter", "Flexible"])}${select("Offense against defense (1–5)", "offense", o.offense, ["1", "2", "3", "4", "5"])}${toggle("Plays defense", "defense", o.defense)}${toggle("Fixed shooting position", "fixedPosition", o.fixedPosition)}${toggle("Can select own NECTAR / sort", "canSort", o.canSort)}${select("Compatibility with us (1–5)", "compatibility", o.compatibility, ["1", "2", "3", "4", "5"])}${textArea("Loading-zone execution", "loadingNotes", o.loadingNotes)}${textArea("Match note", "note", o.note)}</div>`)}</div><div class="form-footer"><button type="button" id="scout-prev"${period === "auto" ? " disabled" : ""}>← Previous</button><span>${esc(active(database.teams).find((t) => t.number === o.team)?.name ?? `Team ${o.team}`)}</span>${period === "review" ? '<button type="submit" class="primary">Save match observation</button>' : '<button type="button" id="scout-next" class="primary">Next →</button>'}</div></form><section class="section"><details id="board-details"><summary>Shared field outcome · match ${o.match}</summary><p class="hint">One canonical snapshot for all four scouts. These counts determine alliance points; per-robot placement estimates are not added again.</p><div id="board-editor"></div></details></section>`;
-    const f = root.querySelector<HTMLFormElement>("#scout-form")!;
-    bindSteppers(f);
-    f.oninput = capture;
-    updateScore();
-    root.querySelectorAll<HTMLButtonElement>("[data-period]").forEach(
-      (b) =>
-        (b.onclick = () => {
-          capture();
-          period = b.dataset.period!;
-          render();
-        }),
+    .sort((a, b) => a.number - b.number)[0];
+  const matchNumber = selectedMatch ?? next?.number ?? 1;
+  const teamNumber = selectedTeam ?? settings.team;
+  const draft = await readDraft<Observation>(`match:${eventId}`);
+  const existing = active(database.observations).find((o) =>
+    editId
+      ? o.id === editId
+      : selectedMatch !== undefined &&
+        o.eventId === eventId &&
+        o.match === matchNumber &&
+        o.team === teamNumber,
+  );
+  let observation = structuredClone(
+    existing ??
+      (!editId &&
+      draft &&
+      (selectedMatch === undefined ||
+        (draft.match === matchNumber && draft.team === teamNumber))
+        ? draft
+        : undefined) ??
+      blankObservation(eventId, teamNumber, matchNumber),
+  );
+  let phase: ScoutPhase = "auto";
+  let editing = false;
+  observation.scout = settings.scoutName ?? observation.scout;
+  const alignAlliance = () => {
+    const match = active(database.matches).find(
+      (m) => m.eventId === eventId && m.number === observation.match,
     );
-    root.querySelector<HTMLButtonElement>("#scout-prev")!.onclick = () => {
+    if (match?.red.includes(observation.team)) observation.alliance = "red";
+    else if (match?.blue.includes(observation.team))
+      observation.alliance = "blue";
+  };
+  alignAlliance();
+  const updateTotal = () => {
+    const total = document.querySelector<HTMLOutputElement>("#scout-total");
+    if (total) {
+      total.hidden = false;
+      total.value = fmt(scoreObservation(observation).total, 0);
+    }
+  };
+  const capture = () => {
+    const form = root.querySelector<HTMLFormElement>("#scout-form");
+    if (!form) return;
+    for (const [key, value] of Object.entries(formValues(form))) {
+      const [group, property] = key.split(".");
+      if (group === "auto" || group === "tele")
+        (observation[group] as unknown as Record<string, unknown>)[property] =
+          value;
+      else if (key === "team" || key === "match")
+        observation[key] = Number(value);
+      else if (key === "alliance")
+        observation.alliance = value as Observation["alliance"];
+      else if (key === "bottom") observation.bottom = Number(value);
+    }
+    observation.scout = settings.scoutName ?? observation.scout;
+    void saveDraft(`match:${eventId}`, observation);
+    updateTotal();
+  };
+  const render = () => {
+    const color = observation.alliance === "red" ? "Red" : "Blue";
+    const controls =
+      phase === "auto"
+        ? toggle("Leave", "auto.leave", observation.auto.leave) +
+          toggle("Park", "auto.park", observation.auto.park) +
+          counter("Hive tips", "auto.tips", observation.auto.tips)
+        : phase === "teleop"
+          ? counter("Hive tips", "tele.tips", observation.tele.tips) +
+            counter(
+              "Cell",
+              "tele.cell",
+              observation.tele.cell,
+              GAME.inventory.pollen +
+                GAME.inventory.redNectar +
+                GAME.inventory.blueNectar,
+            ) +
+            counter(
+              "Flower",
+              "tele.flower",
+              observation.tele.flower,
+              GAME.inventory.pollen +
+                GAME.inventory.redNectar +
+                GAME.inventory.blueNectar,
+            ) +
+            counter(
+              "Garden",
+              "tele.garden",
+              observation.tele.garden,
+              GAME.inventory.pollen +
+                GAME.inventory.redNectar +
+                GAME.inventory.blueNectar,
+            )
+          : toggle("Park", "tele.park", observation.tele.park) +
+            counter(
+              "Bottom nectar",
+              "bottom",
+              observation.bottom,
+              GAME.limits.flowers,
+            );
+    root.innerHTML = `<div class="scout-context"><span>Match ${observation.match} · ${color} · ${observation.team}</span><button type="button" id="edit-match" aria-expanded="${editing}">Edit</button></div><form id="scout-form"><div id="scout-error" class="errors" role="alert"></div>${
+      editing
+        ? `<div class="identity-editor">${field("Match", "match", observation.match, "number", 'min="1" required')}${field("Team", "team", observation.team, "number", 'min="1" max="999999" required')}${select(
+            "Alliance",
+            "alliance",
+            observation.alliance,
+            [
+              ["red", "Red"],
+              ["blue", "Blue"],
+            ],
+          )}</div>`
+        : ""
+    }<section class="scout-phase" aria-label="${phase === "auto" ? "Auto" : phase === "teleop" ? "Teleop" : "End"}"><h1>${phase === "auto" ? "Auto" : phase === "teleop" ? "Teleop" : "End"}</h1><div class="scout-controls">${controls}</div>${phase === "end" ? '<button type="submit" class="primary save-match">Save</button>' : ""}</section></form><nav class="phase-switcher" aria-label="Phase">${(["auto", "teleop", "end"] as const).map((key) => `<button type="button" data-phase="${key}" aria-pressed="${key === phase}">${key === "auto" ? "Auto" : key === "teleop" ? "Teleop" : "End"}</button>`).join("")}</nav>`;
+    const form = root.querySelector<HTMLFormElement>("#scout-form")!;
+    bindSteppers(form);
+    form.oninput = capture;
+    updateTotal();
+    root.querySelector<HTMLButtonElement>("#edit-match")!.onclick = () => {
       capture();
-      period = period === "review" ? "tele" : "auto";
+      editing = !editing;
       render();
     };
-    const next = root.querySelector<HTMLButtonElement>("#scout-next");
-    if (next)
-      next.onclick = () => {
+    root.querySelectorAll<HTMLButtonElement>("[data-phase]").forEach(
+      (button) =>
+        (button.onclick = () => {
+          capture();
+          phase = button.dataset.phase as ScoutPhase;
+          render();
+          window.scrollTo(0, 0);
+        }),
+    );
+    const allianceInput =
+      form.querySelector<HTMLSelectElement>('[name="alliance"]');
+    if (allianceInput)
+      allianceInput.onchange = () => {
         capture();
-        period = period === "auto" ? "tele" : "review";
         render();
       };
-    for (const name of ["team", "match"])
-      f.querySelector<HTMLInputElement>(`[name="${name}"]`)!.onchange = () => {
-        capture();
-        const existing = active(database.observations).find(
-          (x) =>
-            x.team === o.team && x.match === o.match && x.eventId === eventId,
-        );
-        if (existing && existing.id !== o.id) {
-          o = structuredClone(existing);
-          toast("Existing observation opened for editing.");
-        } else {
-          const match = active(database.matches).find(
-            (m) => m.eventId === eventId && m.number === o.match,
+    for (const name of ["team", "match"]) {
+      const input = form.querySelector<HTMLInputElement>(`[name="${name}"]`);
+      if (input)
+        input.onchange = () => {
+          capture();
+          const saved = active(database.observations).find(
+            (o) =>
+              o.team === observation.team &&
+              o.match === observation.match &&
+              o.eventId === eventId,
           );
-          if (match?.red.includes(o.team)) o.alliance = "red";
-          if (match?.blue.includes(o.team)) o.alliance = "blue";
-        }
-        render();
-      };
-    f.onsubmit = async (e) => {
-      e.preventDefault();
+          if (saved && saved.id !== observation.id)
+            observation = structuredClone(saved);
+          alignAlliance();
+          render();
+        };
+    }
+    form.onsubmit = async (event) => {
+      event.preventDefault();
+      if (phase !== "end") return;
       capture();
-      if (!f.reportValidity()) return;
-      const errors = validateObservation(o, database);
-      if (errors.length) {
+      const errors = validateObservation(observation, database);
+      if (!form.reportValidity() || errors.length) {
         root.querySelector("#scout-error")!.innerHTML = errors
           .map(esc)
           .join("<br>");
         return;
       }
-      for (const key of ["offense", "compatibility"] as const)
-        o[key] = Number(o[key]);
-      const known = active(database.teams).some((t) => t.number === o.team);
-      if (!known)
+      if (
+        !active(database.teams).some((team) => team.number === observation.team)
+      )
         await saveEntity("teams", {
-          id: String(o.team),
-          number: o.team,
-          name: `Team ${o.team}`,
+          id: String(observation.team),
+          number: observation.team,
+          name: `Team ${observation.team}`,
           updatedAt: now(),
         });
-      const event = active(database.events).find((e) => e.id === eventId)!;
-      if (!event.teams.includes(o.team))
+      const currentEvent = active(database.events).find(
+        (e) => e.id === eventId,
+      )!;
+      if (!currentEvent.teams.includes(observation.team))
         await saveEntity("events", {
-          ...event,
-          teams: [...event.teams, o.team],
+          ...currentEvent,
+          teams: [...currentEvent.teams, observation.team],
         });
-      await saveEntity("observations", o);
+      await saveEntity("observations", observation);
       await clearDraft(`match:${eventId}`);
-      toast(`Saved ${o.team} / qualification ${o.match}.`);
-      location.hash = `team/${o.team}`;
+      toast("Saved");
+      location.hash = `team/${observation.team}`;
     };
-    root.querySelector<HTMLDetailsElement>("#board-details")!.ontoggle = (
-      e,
-    ) => {
-      if ((e.target as HTMLDetailsElement).open)
-        void renderBoard(
-          root.querySelector("#board-editor")!,
-          eventId,
-          o.match,
-        );
-    };
-  }
+  };
   render();
 }
 export async function renderBoard(
@@ -244,7 +301,7 @@ export async function renderBoard(
       (o) => o.eventId === eventId && o.match === match,
     );
     root.querySelector("#board-preview")!.textContent =
-      `Scouted alliance total: R ${scoreAlliance(obs, b, "red").score} · B ${scoreAlliance(obs, b, "blue").score} (${obs.length}/4 robots)`;
+      `Red ${scoreAlliance(obs, b, "red").score} · Blue ${scoreAlliance(obs, b, "blue").score}`;
   };
   f.oninput = capture;
   capture();
@@ -261,6 +318,6 @@ export async function renderBoard(
     b.confirmed = true;
     await saveEntity("boards", b);
     await clearDraft(`board:${eventId}:${match}`);
-    toast("Shared outcome saved. Official imported results retain precedence.");
+    toast("Saved");
   };
 }

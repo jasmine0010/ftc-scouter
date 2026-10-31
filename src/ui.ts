@@ -117,9 +117,9 @@ export function formValues(
   return out;
 }
 export const empty = (title: string, body: string) =>
-  `<div class="empty"><h3>${esc(title)}</h3><p>${esc(body)}</p></div>`;
+  `<div class="empty"><h3>${esc(title)}</h3></div>`;
 export function section(title: string, content: string, hint = "") {
-  return `<section class="section"><header class="section-head"><h2>${esc(title)}</h2>${hint ? `<p>${esc(hint)}</p>` : ""}</header>${content}</section>`;
+  return `<section class="section"><header class="section-head"><h2>${esc(title)}</h2></header>${content}</section>`;
 }
 export function table(headers: string[], rows: string[][], label = "Data") {
   return `<div class="table-wrap" tabindex="0" role="region" aria-label="${esc(label)}"><table><thead><tr>${headers.map((h) => `<th scope="col">${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((c, i) => `<td${i === 0 ? ' class="first"' : ""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
@@ -138,7 +138,7 @@ export function sparkline(
         (v, i) => `${16 + i * step},${height - 24 - (v / max) * (height - 40)}`,
       )
       .join(" ");
-  return `<svg class="trend" viewBox="0 0 ${width} ${height}" role="img" aria-label="Points trend: ${values.map((v) => fmt(v, 0)).join(", ")}"><line x1="16" y1="${height - 24}" x2="${width - 12}" y2="${height - 24}" class="grid-line"/><polyline points="${points}" fill="none" stroke="var(--white)" stroke-width="1.5"/>${values.map((v, i) => `<circle cx="${16 + i * step}" cy="${height - 24 - (v / max) * (height - 40)}" r="2.5" fill="var(--red)"/><text x="${16 + i * step}" y="${height - 7}" text-anchor="middle">${esc(labels?.[i] ?? i + 1)}</text>`).join("")}</svg>`;
+  return `<svg class="trend" viewBox="0 0 ${width} ${height}" role="img" aria-label="Points trend: ${values.map((v) => fmt(v, 0)).join(", ")}"><line x1="16" y1="${height - 24}" x2="${width - 12}" y2="${height - 24}" class="grid-line"/><polyline points="${points}" fill="none" stroke="var(--white)" stroke-width="1.5"/>${values.map((v, i) => `<circle cx="${16 + i * step}" cy="${height - 24 - (v / max) * (height - 40)}" r="2.5" fill="var(--white)"/><text x="${16 + i * step}" y="${height - 7}" text-anchor="middle">${esc(labels?.[i] ?? i + 1)}</text>`).join("")}</svg>`;
 }
 const routeMarkup = (routes: { route: Route; partner?: boolean }[]) =>
   routes
@@ -146,7 +146,7 @@ const routeMarkup = (routes: { route: Route; partner?: boolean }[]) =>
       route.paths
         .map(
           (path) =>
-            `<polyline points="${path.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="${partner ? "#beb9b6" : "#f3f1eb"}" stroke-width="1.4"${partner ? ' stroke-dasharray="3 2"' : ""} stroke-linecap="round" stroke-linejoin="round"/>${path[0] ? `<circle cx="${path[0].x}" cy="${path[0].y}" r="2.5" fill="${partner ? "#f3f1eb" : "#802010"}"/>` : ""}`,
+            `<polyline points="${path.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="${partner ? "#beb9b6" : "#f3f1eb"}" stroke-width="1.4"${partner ? ' stroke-dasharray="3 2"' : ""} stroke-linecap="round" stroke-linejoin="round"/>${path[0] ? `<circle cx="${path[0].x}" cy="${path[0].y}" r="2.5" fill="${partner ? "#f3f1eb" : "#beb9b6"}"/>` : ""}`,
         )
         .join(""),
     )
@@ -156,7 +156,7 @@ export function fieldSVG(
   routes: { route: Route; partner?: boolean }[] = [],
   interactive = false,
 ) {
-  return `<svg ${interactive ? 'id="route-canvas"' : ""} class="field-map${interactive ? " drawable" : ""}" viewBox="-10 -10 164 169" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BIOBUZZ top-down field, 144 by 144 inches. Red left, blue right, audience below."><rect x="0" y="0" width="144" height="144" fill="#070302" stroke="#beb9b6" stroke-width=".6"/><defs><clipPath id="official-field-clip"><rect x="0" y="0" width="144" height="144"/></clipPath></defs><image href="/biobuzz-field.png" x="-58.07" y="-9.02" width="260.14" height="165.58" preserveAspectRatio="none" clip-path="url(#official-field-clip)" style="filter:grayscale(1) brightness(.4)"/>${[24, 48, 72, 96, 120].map((n) => `<path d="M${n} 0V144 M0 ${n}H144" fill="none" stroke="#342c2a" stroke-width=".35"/>`).join("")}<rect x="0" y="24" width="11" height="23" fill="#241d1b" stroke="#beb9b6" stroke-width=".5"/><rect x="133" y="97" width="11" height="23" fill="#241d1b" stroke="#beb9b6" stroke-width=".5"/><rect x="0" y="142" width="23" height="2" fill="#beb9b6"/><rect x="121" y="0" width="23" height="2" fill="#beb9b6"/><rect x="47.3" y="52.5" width="49.4" height="39" rx=".5" fill="none" stroke="#beb9b6" stroke-width=".8"/><path d="M60 54V90 M84 54V90" stroke="#beb9b6" stroke-width=".6"/>${[60, 84].map((x) => [56, 88].map((y) => `<rect x="${x - 7}" y="${y - 5}" width="14" height="10" fill="#241d1b" stroke="#beb9b6" stroke-width=".6"/>`).join("")).join("")}<g fill="#f3f1eb" font-family="Arial,sans-serif" font-size="3.6" text-anchor="middle"><text x="60" y="74">R HIVE</text><text x="84" y="74">B HIVE</text><text x="18" y="35">R LOAD</text><text x="123" y="109">B LOAD</text><text x="16" y="138">R GARDEN</text><text x="127" y="8">B GARDEN</text><text x="72" y="155">AUDIENCE</text>${[12, 36, 60, 84, 108, 132].map((x, i) => `<text x="${x}" y="-4">${"ABCDEF"[i]}</text><text x="-5" y="${x}">${6 - i}</text>`).join("")}</g>${[
+  return `<svg ${interactive ? 'id="route-canvas"' : ""} class="field-map${interactive ? " drawable" : ""}" viewBox="-10 -10 164 169" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BIOBUZZ top-down field, 144 by 144 inches. Red left, blue right, audience below."><rect x="0" y="0" width="144" height="144" fill="#070302" stroke="#beb9b6" stroke-width=".6"/><defs><clipPath id="official-field-clip"><rect x="0" y="0" width="144" height="144"/></clipPath></defs><image href="/biobuzz-field.png" x="-58.07" y="-9.02" width="260.14" height="165.58" preserveAspectRatio="none" clip-path="url(#official-field-clip)" style="filter:grayscale(1) brightness(.4)"/>${[24, 48, 72, 96, 120].map((n) => `<path d="M${n} 0V144 M0 ${n}H144" fill="none" stroke="#342c2a" stroke-width=".35"/>`).join("")}<rect x="0" y="24" width="11" height="23" fill="#241d1b" stroke="#beb9b6" stroke-width=".5"/><rect x="133" y="97" width="11" height="23" fill="#241d1b" stroke="#beb9b6" stroke-width=".5"/><rect x="0" y="142" width="23" height="2" fill="#beb9b6"/><rect x="121" y="0" width="23" height="2" fill="#beb9b6"/><rect x="47.3" y="52.5" width="49.4" height="39" rx=".5" fill="none" stroke="#beb9b6" stroke-width=".8"/><path d="M60 54V90 M84 54V90" stroke="#beb9b6" stroke-width=".6"/>${[60, 84].map((x) => [56, 88].map((y) => `<rect x="${x - 7}" y="${y - 5}" width="14" height="10" fill="#241d1b" stroke="#beb9b6" stroke-width=".6"/>`).join("")).join("")}<g fill="#f3f1eb" font-family="Archivo,Arial,sans-serif" font-size="8" text-anchor="middle"><text x="60" y="74">R Hive</text><text x="84" y="74">B Hive</text><text x="18" y="35">R Load</text><text x="123" y="109">B Load</text><text x="16" y="138">R Garden</text><text x="127" y="8">B Garden</text><text x="72" y="155">Audience</text>${[12, 36, 60, 84, 108, 132].map((x, i) => `<text x="${x}" y="-4">${"ABCDEF"[i]}</text><text x="-5" y="${x}">${6 - i}</text>`).join("")}</g>${[
     [48, 2],
     [142, 48],
     [96, 142],
@@ -164,7 +164,7 @@ export function fieldSVG(
   ]
     .map(
       ([x, y], i) =>
-        `<circle cx="${x}" cy="${y}" r="2" fill="#f3f1eb"/><text x="${x + (x < 5 ? 10 : x > 140 ? -10 : 0)}" y="${y < 5 ? 12 : y > 140 ? y - 6 : y - 5}" fill="#f3f1eb" font-family="Arial,sans-serif" font-size="3.7" text-anchor="middle">F${i + 1}</text>`,
+        `<circle cx="${x}" cy="${y}" r="2" fill="#f3f1eb"/><text x="${x + (x < 5 ? 10 : x > 140 ? -10 : 0)}" y="${y < 5 ? 12 : y > 140 ? y - 6 : y - 5}" fill="#f3f1eb" font-family="Archivo,Arial,sans-serif" font-size="8" text-anchor="middle">F${i + 1}</text>`,
     )
     .join(
       "",
