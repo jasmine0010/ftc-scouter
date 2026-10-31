@@ -58,6 +58,18 @@ export function textArea(
   return `<label class="field wide"><span>${esc(plainLabel(label))}</span><textarea name="${esc(name)}" rows="3" ${extra}>${esc(value)}</textarea></label>`;
 }
 export function toggle(label: string, name: string, value: unknown) {
+  if (
+    [
+      "leave",
+      "autoPark",
+      "park",
+      "auto.leave",
+      "auto.park",
+      "tele.park",
+    ].includes(name)
+  ) {
+    return `<label class="yes-no-row"><input type="checkbox" name="${esc(name)}"${checked(value)}><span>${esc(plainLabel(label))}</span><strong class="yes-no-state" aria-hidden="true">${value ? "Yes" : "No"}</strong></label>`;
+  }
   return `<label class="toggle"><span>${esc(plainLabel(label))}</span><input type="checkbox" name="${esc(name)}"${checked(value)}><span class="toggle-ui" aria-hidden="true"></span></label>`;
 }
 export function counter(
@@ -81,7 +93,15 @@ export function bindSteppers(root: HTMLElement) {
             ? Number(input.value) <= Number(input.min || 0)
             : Number(input.value) >= Number(input.max || Infinity);
     });
-  root.addEventListener("input", refresh);
+  root.addEventListener("input", () => {
+    refresh();
+    root
+      .querySelectorAll<HTMLInputElement>(".yes-no-row input")
+      .forEach((input) => {
+        const state = input.parentElement?.querySelector(".yes-no-state");
+        if (state) state.textContent = input.checked ? "Yes" : "No";
+      });
+  });
   refresh();
   root.querySelectorAll<HTMLButtonElement>("[data-step]").forEach(
     (b) =>
