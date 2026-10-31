@@ -3499,11 +3499,11 @@ button[aria-pressed="true"],
   background: var(--selected);
   border-color: var(--line-strong);
 }
-.stepper button[data-step="1"] {
+.stepper button[data-step]:not([data-step^="-"]) {
   background: var(--red);
   border-color: var(--red-hover);
 }
-.stepper button[data-step="1"]:hover:not(:disabled) {
+.stepper button[data-step]:not([data-step^="-"]):hover:not(:disabled) {
   background: var(--red-hover);
   border-color: var(--red-hover);
 }
@@ -3837,9 +3837,6 @@ td {
   #scout-form .scout-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  #scout-form .stepper {
-    grid-template-columns: 56px minmax(0, 1fr) 56px;
-  }
 }
 @media (max-width: 360px) {
   :root {
@@ -3887,11 +3884,11 @@ td {
   #scout-form .scout-grid {
     gap: 16px;
   }
-  #scout-form .counter {
+  .counter {
     padding: 8px;
     gap: 4px;
   }
-  #scout-form .counter .stepper {
+  .counter .stepper {
     grid-template-columns: 40px 32px 40px;
     gap: 4px;
   }
