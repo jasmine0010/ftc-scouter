@@ -231,6 +231,21 @@ export async function renderPit(root: HTMLElement, editTeam?: number) {
                     ),
         )
         .join("");
+    const autonomous = () => {
+      const input = (key: string, label?: string) => {
+        const definition = pitSections[0].fields.find(
+          ([name]) => name === key,
+        )!;
+        return fields(pit.answers, [
+          [key, label ?? definition[1], definition[2], definition[3]],
+        ]);
+      };
+      const group = (title: string, content: string) =>
+        `<fieldset class="pit-auto-group"><legend>${esc(title)}</legend><div class="pit-auto-fields">${content}</div></fieldset>`;
+      const description = (title: string, key: string) =>
+        `<details class="pit-auto-description"><summary>${esc(title)}</summary>${input(key)}</details>`;
+      return `<div class="pit-auto-groups">${group("Movement", `<div class="pit-auto-movement">${input("leave", "Leave")}${input("autoPark", "Park")}</div>`)}${group("Hive tips", `${input("attemptTip", "Attempts tips")}<div class="pit-counter-pair">${input("autoTipsAvg", "Average")}${input("autoTipsMax", "Maximum")}</div>`)}${group("Elements", `<div class="pit-counter-pair">${input("autoLaunched", "Launched")}${input("cellAvg", "Left in cell")}</div>`)}${group("Auto routes", `${description("Near", "nearSynopsis")}${description("Far", "farSynopsis")}${description("Notes", "autoNotes")}`)}</div>`;
+    };
     root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">PIT SCOUTING / ${esc(GAME.season)}</p><h2>Pit Scouting</h2><p class="lede">One record per team. Routes, capabilities and the plan behind the numbers.</p></div><span class="quiet" id="draft-status">Draft autosaves on this device</span></div><ol class="steps" aria-label="Pit scouting steps">${["Team information", "Auto field positions", "Robot analysis"].map((s, i) => `<li${step === i + 1 ? ' aria-current="step"' : ""}><span>${i + 1}</span>${s}</li>`).join("")}</ol><form id="pit-form"><div id="pit-error" class="errors" role="alert"></div>${
       step === 1
         ? section(
@@ -250,7 +265,9 @@ export async function renderPit(root: HTMLElement, editTeam?: number) {
               .map((s) =>
                 section(
                   s.title,
-                  `<div class="form-grid">${fields(pit.answers, s.fields)}${s.title === "TeleOp" ? `<div class="wide launch-selector"><span>Field-position selector</span>${fieldSVG()}<div class="button-row">${["Near", "Center", "Far", "Perimeter", "Flexible"].map((pos) => `<button type="button" data-launch="${pos}" aria-pressed="${pit.answers.launchPosition === pos}">${pos}</button>`).join("")}</div></div>` : ""}${s.title === "Additional information" ? `<label class="field"><span>Robot photo · JPEG, PNG, WebP</span><input type="file" id="pit-photo" accept="image/jpeg,image/png,image/webp"></label>${pit.photo ? `<img class="robot-photo" src="${esc(pit.photo)}" alt="Robot ${pit.team}"><button type="button" id="remove-photo">Remove photo</button>` : ""}` : ""}</div>`,
+                  s.title === "Autonomous"
+                    ? autonomous()
+                    : `<div class="form-grid">${fields(pit.answers, s.fields)}${s.title === "TeleOp" ? `<div class="wide launch-selector"><span>Field-position selector</span>${fieldSVG()}<div class="button-row">${["Near", "Center", "Far", "Perimeter", "Flexible"].map((pos) => `<button type="button" data-launch="${pos}" aria-pressed="${pit.answers.launchPosition === pos}">${pos}</button>`).join("")}</div></div>` : ""}${s.title === "Additional information" ? `<label class="field"><span>Robot photo · JPEG, PNG, WebP</span><input type="file" id="pit-photo" accept="image/jpeg,image/png,image/webp"></label>${pit.photo ? `<img class="robot-photo" src="${esc(pit.photo)}" alt="Robot ${pit.team}"><button type="button" id="remove-photo">Remove photo</button>` : ""}` : ""}</div>`,
                 ),
               )
               .join("")

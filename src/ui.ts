@@ -62,6 +62,7 @@ export function toggle(label: string, name: string, value: unknown) {
     [
       "leave",
       "autoPark",
+      "attemptTip",
       "park",
       "auto.leave",
       "auto.park",
