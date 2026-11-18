@@ -28,9 +28,17 @@ export let persistenceError = "";
  */
 export let apiBase = "";
 export const apiUrl = (path: string) => apiBase + path;
+/**
+ * Team passcode for this visit only. Never saved, so the site asks for it every
+ * time it is opened.
+ */
+let teamCode = "";
+export const setTeamCode = (code: string) => {
+  teamCode = code;
+};
 /** Headers for team-only endpoints (sync, official event import). */
 export const teamHeaders = (): Record<string, string> =>
-  settings.teamCode ? { "X-Team-Code": settings.teamCode } : {};
+  teamCode ? { "X-Team-Code": teamCode } : {};
 async function loadConfig() {
   try {
     const response = await fetch("./config.json", { cache: "no-cache" });
@@ -109,6 +117,14 @@ export async function initialize() {
   database = (await get<Database>("database")) ?? createDatabase();
   listenToOtherWindows();
   settings = (await get<Settings>("settings")) ?? settings;
+  // Earlier versions saved the team code on the device; remove it.
+  if ("teamCode" in settings) {
+    const { teamCode: _old, ...rest } = settings as Settings & {
+      teamCode?: string;
+    };
+    settings = rest;
+    await put("settings", settings);
+  }
   await persist();
   if (!active(database.events).some((event) => event.id === settings.eventId))
     await saveSettings({ eventId: active(database.events)[0].id });

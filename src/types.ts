@@ -185,8 +185,6 @@ export interface Settings {
   team: number;
   eventId: string;
   syncUrl: string;
-  /** Shared team passcode sent with every sync; set once per device. */
-  teamCode?: string;
 }
 export interface Database {
   schemaVersion: 1;

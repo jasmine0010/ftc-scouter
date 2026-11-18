@@ -50,7 +50,7 @@ npx wrangler deploy
 
 It prints the Worker's address, like `https://curiosity-scout-sync.YOUR-SUBDOMAIN.workers.dev`. **Copy it.**
 
-5. Set the **team code**: a passcode every scout types once. Pick something not easy to guess, and share it only with your scouts.
+5. Set the **team code**: a passcode scouts type each time they open the site. Pick something not easy to guess, and share it only with your scouts.
 
 ```bash
 npx wrangler secret put TEAM_CODE
@@ -82,7 +82,7 @@ npx wrangler secret put FTC_API_TOKEN
 ## 4. Set up each scout's phone
 
 1. Open `https://YOUR-GITHUB-USERNAME.github.io/ftc-scouter/` and add it to the home screen (Share → Add to Home Screen on iPhone; ⋮ → Add to Home screen on Android). Opening it once while online also caches it for offline use.
-2. The first time it opens, a popup asks for the **team code**. Enter it once; the device remembers it. (On iPhone, the Home Screen app keeps its own storage, so it asks once more there.)
+2. Every time the site is opened or reloaded, a popup asks for the **team code**. It is never saved on the device.
 3. The dot next to ⚙ shows the sync state; **Synced** means the phone is sharing with everyone.
 
 Every phone must use **this exact address**. The browser keeps saved data separately per address, so `localhost`, `127.0.0.1` and the Pages address each have their own data.
@@ -107,7 +107,7 @@ Data on your laptop at `http://127.0.0.1:…` belongs to that address and won't 
 
 | Sync dot says | Meaning / fix |
 |---|---|
-| **Wrong team code** | The code was cancelled, mistyped or changed. Reload the app; the popup asks again. Codes are case-sensitive. Saves stay on the device and sync once the right code is entered. |
+| **Wrong team code** | The code was cancelled or mistyped. Reload the app; the popup asks again. Codes are case-sensitive. Saves stay on the device and sync once the right code is entered. |
 | **Local · sync pending** | No connection to the Worker. Check signal; check that `config.json` shows the right address; open the Worker's `/api/sync` to confirm it's running. Retries every 30 seconds. |
 | Sync fails only on the Pages site, and the browser console mentions CORS | `ALLOWED_ORIGINS` in `wrangler.toml` doesn't match `https://YOUR-GITHUB-USERNAME.github.io` exactly. Fix it and `npx wrangler deploy`. |
 

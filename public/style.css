@@ -4635,3 +4635,25 @@ td {
 #app #live-score > strong {
   font-size: var(--text-header);
 }
+
+/* Team profile summary: all six stats on one line, centred, numbers at heading size. */
+#app .profile-summary {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+#app .profile-summary > div {
+  padding: 0 12px 20px;
+  text-align: center;
+}
+#app .profile-summary strong {
+  font-size: var(--text-heading);
+}
+/* Phones: two even rows of three. */
+@media (max-width: 700px) {
+  #app .profile-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  #app .profile-summary strong {
+    font-size: var(--text-form);
+  }
+}
+

@@ -100,7 +100,7 @@ Merges resolve observations by event/match/team, pits and picks by event/team, t
 
 ## Offline storage and sync
 
-**Online for the whole team:** host the app on GitHub Pages and share saves through a free Cloudflare Worker. Step-by-step guide: [docs/DEPLOY.md](docs/DEPLOY.md). The first time the hosted site opens, a popup asks for the shared team code; each device remembers it.
+**Online for the whole team:** host the app on GitHub Pages and share saves through a free Cloudflare Worker. Step-by-step guide: [docs/DEPLOY.md](docs/DEPLOY.md). Every time the hosted site is opened, a popup asks for the shared team code; it is never saved on the device.
 
 Records, compressed photos, settings and drafts live in IndexedDB. The service worker caches the app, modules, fonts and field graphic after the first successful load. Test offline **after** that first load. Service workers require HTTPS or localhost; plain HTTP on a LAN address does not provide the offline page cache.
 

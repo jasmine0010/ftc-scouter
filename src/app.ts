@@ -8,6 +8,7 @@ import {
   onDataChange,
   persistenceError,
   saveSettings,
+  setTeamCode,
   sync,
   syncState,
 } from "./storage.js";
@@ -145,23 +146,24 @@ function failure(e: unknown) {
 }
 /**
  * The hosted site syncs through the Cloudflare Worker, which needs the team code.
- * Ask once in a browser popup; it is remembered on this device. Asks again only if
- * the Worker rejects it (e.g. the code was changed). Offline or cancelled, the app
- * still opens and saves locally.
+ * A browser popup asks for it every time the site is opened; it is not saved.
+ * Cancelled, unsupported or offline, the app still opens and saves locally.
  */
 async function requireTeamCode() {
   if (!apiBase) return; // Local server: no code needed.
   let message = "Enter your team code to open Scout Hub";
   for (;;) {
-    if (!settings.teamCode) {
-      const code = window.prompt(message)?.trim();
-      // Cancelled (or popups blocked): open without syncing; ask again next time.
-      if (!code) return;
-      await saveSettings({ teamCode: code });
+    let code: string | undefined;
+    try {
+      code = window.prompt(message)?.trim();
+    } catch {
+      // Some embedded browsers have no popups at all.
     }
+    if (!code) return;
+    setTeamCode(code);
     await sync();
     if (syncState !== "Wrong team code") return;
-    await saveSettings({ teamCode: "" });
+    setTeamCode("");
     message = "That team code didn't work. Enter your team code";
   }
 }
