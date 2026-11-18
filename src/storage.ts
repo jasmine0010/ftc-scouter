@@ -179,6 +179,66 @@ export async function saveEntity<K extends Collection>(
   emit();
   scheduleSync();
 }
+/**
+ * Deletes records by marking them `deleted` with a fresh timestamp (a tombstone).
+ * The mark syncs like any save, and stops older copies on other devices from
+ * bringing the record back.
+ */
+export async function deleteRecords(items: [Collection, Entity][]) {
+  if (!items.length) return;
+  const stamp = new Date().toISOString();
+  for (const [key, entity] of items) {
+    const list = database[key] as Entity[],
+      i = list.findIndex((x) => x.id === entity.id);
+    if (i >= 0) list[i] = { ...list[i], deleted: true, updatedAt: stamp };
+  }
+  await persist();
+  emit();
+  scheduleSync();
+}
+/** Everything that belongs to one team at one event (what "Delete team" removes). */
+export function teamRecords(db: Database, team: number, eventId: string) {
+  const at = <T extends Entity & { team: number; eventId: string }>(
+    list: T[],
+  ) => active(list).filter((x) => x.team === team && x.eventId === eventId);
+  return {
+    observations: at(db.observations),
+    pits: at(db.pits),
+    notes: at(db.notes),
+    picks: at(db.picks),
+  };
+}
+/**
+ * Deletes a team from an event: its match, pit, note and pick records there, and
+ * its place on the roster. The team itself is deleted only if no other event
+ * still lists it or holds its records.
+ */
+export async function deleteTeam(team: number, eventId: string) {
+  const records = teamRecords(database, team, eventId);
+  const items: [Collection, Entity][] = [
+    ...records.observations.map(
+      (e) => ["observations", e] as [Collection, Entity],
+    ),
+    ...records.pits.map((e) => ["pits", e] as [Collection, Entity]),
+    ...records.notes.map((e) => ["notes", e] as [Collection, Entity]),
+    ...records.picks.map((e) => ["picks", e] as [Collection, Entity]),
+  ];
+  const elsewhere = active(database.events).some(
+    (e) =>
+      e.id !== eventId &&
+      (e.teams.includes(team) ||
+        Object.values(teamRecords(database, team, e.id)).some((l) => l.length)),
+  );
+  const record = active(database.teams).find((t) => t.number === team);
+  if (record && !elsewhere) items.push(["teams", record]);
+  const event = active(database.events).find((e) => e.id === eventId);
+  if (event?.teams.includes(team))
+    await saveEntity("events", {
+      ...event,
+      teams: event.teams.filter((t) => t !== team),
+    });
+  await deleteRecords(items);
+}
 export async function saveDraft(key: string, value: unknown) {
   try {
     await put(`draft:${key}`, value);

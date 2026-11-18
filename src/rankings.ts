@@ -2,52 +2,86 @@ import { mean, simulateRanks, standings, teamStats } from "./analytics.js";
 import { scoreObservation, deriveResults, shotAccuracy } from "./scoring.js";
 import { active, type Event } from "./types.js";
 import { GAME } from "./game.js";
-import { database, settings, observationCSV, exportFile } from "./storage.js";
-import { esc, field, fmt, pct, section, select, table } from "./ui.js";
+import {
+  database,
+  deleteRecords,
+  settings,
+  observationCSV,
+  exportFile,
+} from "./storage.js";
+import {
+  actionMenu,
+  confirmDialog,
+  moreButton,
+  esc,
+  field,
+  fmt,
+  pct,
+  section,
+  table,
+} from "./ui.js";
 
 type Filters = {
-  team: string;
+  search: string;
   auto: string;
   tele: string;
   min: string;
   max: string;
 };
-const filters: Filters = {
-  team: "",
+const noFilters: Filters = {
+  search: "",
   auto: "all",
   tele: "all",
   min: "",
   max: "",
 };
+const filters: Filters = { ...noFilters };
+const filtering = () =>
+  (Object.keys(noFilters) as (keyof Filters)[]).some(
+    (k) => filters[k] !== noFilters[k],
+  );
 let filterEvent = "";
 const tier = (value: number, choice: string, base: number) =>
   choice === "all" ||
   (choice === "high" && value >= base * 2) ||
   (choice === "medium" && value >= base && value < base * 2) ||
   (choice === "low" && value < base);
+/** Search matches the start of a team number or any part of its name. */
 const matchesFilters = (
   team: number,
+  name: string,
   auto: number,
   tele: number,
   score: number,
-) =>
-  (!filters.team || team === Number(filters.team)) &&
-  tier(auto, filters.auto, GAME.points.tip) &&
-  tier(tele, filters.tele, GAME.points.tip * 2) &&
-  (filters.min === "" || score >= Number(filters.min)) &&
-  (filters.max === "" || score <= Number(filters.max));
+) => {
+  const q = filters.search.trim().toLowerCase();
+  return (
+    (!q || String(team).startsWith(q) || name.toLowerCase().includes(q)) &&
+    tier(auto, filters.auto, GAME.points.tip) &&
+    tier(tele, filters.tele, GAME.points.tip * 2) &&
+    (filters.min === "" || score >= Number(filters.min)) &&
+    (filters.max === "" || score <= Number(filters.max))
+  );
+};
+/** One-line filter bar: search, two level dropdowns, a score range, Clear. */
 function filterMarkup() {
-  const choices: [string, string][] = [
-    ["all", "All"],
-    ["high", "High"],
-    ["medium", "Medium"],
-    ["low", "Low"],
-  ];
-  return `<div class="filter-row">${field("Team ID", "team-filter", filters.team, "number", 'min="1"')}${select("Auto", "auto-filter", filters.auto, choices)}${select("TeleOp", "tele-filter", filters.tele, choices)}${field("Min score", "min-filter", filters.min, "number", 'min="0"')}${field("Max score", "max-filter", filters.max, "number", 'min="0"')}<button id="clear-filters">Clear Filters</button></div>`;
+  const level = (label: string, name: string, value: string) =>
+    `<select name="${name}" aria-label="${label} level">${[
+      ["all", `${label}: any`],
+      ["high", `${label}: high`],
+      ["medium", `${label}: medium`],
+      ["low", `${label}: low`],
+    ]
+      .map(
+        ([v, text]) =>
+          `<option value="${v}"${v === value ? " selected" : ""}>${text}</option>`,
+      )
+      .join("")}</select>`;
+  return `<div class="filter-bar" role="search"><input name="search-filter" type="search" placeholder="Search team number or name" aria-label="Search teams" value="${esc(filters.search)}">${level("Auto", "auto-filter", filters.auto)}${level("TeleOp", "tele-filter", filters.tele)}<span class="score-range"><input name="min-filter" type="number" min="0" inputmode="numeric" placeholder="Min score" aria-label="Minimum score" value="${esc(filters.min)}"><span aria-hidden="true">–</span><input name="max-filter" type="number" min="0" inputmode="numeric" placeholder="Max" aria-label="Maximum score" value="${esc(filters.max)}"></span>${filtering() ? '<button type="button" id="clear-filters" class="text-button">Clear</button>' : ""}</div>`;
 }
 function bindFilters(root: HTMLElement, render: () => void) {
   for (const [name, key] of [
-    ["team-filter", "team"],
+    ["search-filter", "search"],
     ["auto-filter", "auto"],
     ["tele-filter", "tele"],
     ["min-filter", "min"],
@@ -59,19 +93,19 @@ function bindFilters(root: HTMLElement, render: () => void) {
     input.oninput = () => {
       filters[key] = input.value;
       render();
-      root.querySelector<HTMLElement>(`[name="${name}"]`)!.focus();
+      // The bar is redrawn; keep typing where you were.
+      const again = root.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
+      again.focus();
+      if (again.type === "search")
+        again.setSelectionRange(again.value.length, again.value.length);
     };
   }
-  root.querySelector<HTMLButtonElement>("#clear-filters")!.onclick = () => {
-    Object.assign(filters, {
-      team: "",
-      auto: "all",
-      tele: "all",
-      min: "",
-      max: "",
-    });
-    render();
-  };
+  const clear = root.querySelector<HTMLButtonElement>("#clear-filters");
+  if (clear)
+    clear.onclick = () => {
+      Object.assign(filters, noFilters);
+      render();
+    };
 }
 export function renderRankings(
   root: HTMLElement,
@@ -80,13 +114,7 @@ export function renderRankings(
 ) {
   if (filterEvent !== event.id) {
     filterEvent = event.id;
-    Object.assign(filters, {
-      team: "",
-      auto: "all",
-      tele: "all",
-      min: "",
-      max: "",
-    });
+    Object.assign(filters, noFilters);
   }
   root.innerHTML = `<div class="page-heading"><h2>${tab === "standings" ? "Standings" : tab === "simulator" ? "Rank simulator" : "Rankings & Data"}</h2></div>${tab === "overview" || tab === "matches" ? `<nav class="tabs data-tabs" aria-label="Rankings and data views"><a href="#rankings/overview"${tab === "overview" ? ' aria-current="page"' : ""}>Teams</a><a href="#rankings/matches"${tab === "matches" ? ' aria-current="page"' : ""}>Matches</a></nav>` : ""}<div id="rank-content"></div>`;
   const content = root.querySelector<HTMLElement>("#rank-content")!;
@@ -124,7 +152,13 @@ export function renderRankings(
           };
         })
         .filter((team) =>
-          matchesFilters(team.team, team.auto, team.filterTele, team.average),
+          matchesFilters(
+            team.team,
+            team.name,
+            team.auto,
+            team.filterTele,
+            team.average,
+          ),
         )
         .sort((a, b) => {
           const left = a[sort as keyof typeof a] ?? -1,
@@ -173,6 +207,7 @@ export function renderRankings(
             observation.eventId === event.id &&
             matchesFilters(
               observation.team,
+              name(observation.team),
               score.auto,
               score.tele,
               score.total,
@@ -203,11 +238,11 @@ export function renderRankings(
         )
         .join(
           "",
-        )}<th>Scores breakdown</th><th>Notes</th></tr></thead><tbody>${observations
+        )}<th>Scores breakdown</th><th>Notes</th><th><span class="visually-hidden">Actions</span></th></tr></thead><tbody>${observations
         .map((observation) => {
           const score = scoreObservation(observation),
             end = score.categories.telePark + score.categories.bottom;
-          return `<tr><td>${fmt(score.total, 0)}</td><td><a href="#team/${observation.team}">${observation.team}</a></td><td><a href="#scout/${esc(observation.id)}">${observation.match}</a></td><td>${observation.alliance === "red" ? "Red" : "Blue"}</td><td><dl class="match-breakdown"><div><dt>Auto</dt><dd>${score.auto}</dd></div><div><dt>TeleOp</dt><dd>${score.tele - end}</dd></div><div><dt>End</dt><dd>${end}</dd></div><div><dt>Fouls</dt><dd>${score.penalties}</dd></div></dl></td><td class="note-cell">${esc(observation.note || "No notes.")}</td></tr>`;
+          return `<tr><td>${fmt(score.total, 0)}</td><td><a href="#team/${observation.team}">${observation.team}</a></td><td><a href="#scout/${esc(observation.id)}">${observation.match}</a></td><td>${observation.alliance === "red" ? "Red" : "Blue"}</td><td><dl class="match-breakdown"><div><dt>Auto</dt><dd>${score.auto}</dd></div><div><dt>TeleOp</dt><dd>${score.tele - end}</dd></div><div><dt>End</dt><dd>${end}</dd></div><div><dt>Fouls</dt><dd>${score.penalties}</dd></div></dl></td><td class="note-cell">${esc(observation.note || "No notes.")}</td><td>${moreButton(`data-obs-menu="${esc(observation.id)}"`, `More actions for team ${observation.team}, match ${observation.match}`)}</td></tr>`;
         })
         .join("")}</tbody></table></div>${section(
         "Event schedule",
@@ -230,6 +265,33 @@ export function renderRankings(
         ),
       )}`;
       bindFilters(content, draw);
+      content.querySelectorAll<HTMLButtonElement>("[data-obs-menu]").forEach(
+        (b) =>
+          (b.onclick = async () => {
+            const o = active(database.observations).find(
+              (x) => x.id === b.dataset.obsMenu,
+            );
+            if (!o) return;
+            const action = await actionMenu(
+              `Team ${o.team} · match ${o.match}`,
+              [
+                { key: "edit", label: "Edit match record" },
+                { key: "delete", label: "Delete match record", danger: true },
+              ],
+            );
+            if (action === "edit") location.hash = `#scout/${o.id}`;
+            if (
+              action === "delete" &&
+              (await confirmDialog(
+                "Delete match record?",
+                `Team ${o.team}'s record for match ${o.match} will be removed for every scout.`,
+              ))
+            ) {
+              await deleteRecords([["observations", o]]);
+              draw();
+            }
+          }),
+      );
       content.querySelectorAll<HTMLButtonElement>("[data-match-sort]").forEach(
         (button) =>
           (button.onclick = () => {

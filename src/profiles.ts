@@ -1,7 +1,15 @@
 import { eventOPR, mean, pitDisagreements, teamStats } from "./analytics.js";
 import { scoreObservation, robotCounts, shotAccuracy } from "./scoring.js";
 import { active, now, uid, type Event } from "./types.js";
-import { apiUrl, database, settings, saveEntity } from "./storage.js";
+import {
+  apiUrl,
+  database,
+  deleteRecords,
+  deleteTeam,
+  settings,
+  saveEntity,
+  teamRecords,
+} from "./storage.js";
 import { pitSections } from "./pit.js";
 import {
   empty,
@@ -18,6 +26,10 @@ import {
   textArea,
   toast,
   routeLegend,
+  actionMenu,
+  confirmDialog,
+  moreButton,
+  textDialog,
 } from "./ui.js";
 export function renderDirectory(root: HTMLElement, event: Event) {
   let query = "";
@@ -152,7 +164,7 @@ export function renderProfile(
       fmt(x.sd),
     ]),
   ];
-  root.innerHTML = `<a href="#teams" class="back-link">← Team profiles</a><div class="page-heading"><div><p class="eyebrow">TEAM ${team}${team === settings.team ? " / OUR TEAM" : ""}</p><h2>${team} · ${esc(t.name)}</h2><p class="lede">${season ? "Season-long evidence" : "Event evidence"} · ${s.obs.length} scouted matches · ${pct(s.reliability)} matches without breakdown</p></div><div class="button-row"><button id="season-toggle">${season ? "This event" : "Season view"}</button><a class="button primary" href="#pit/${team}">${pit ? "Edit pit record" : "Scout this pit"} →</a></div></div><div class="stat-row profile-summary">${[
+  root.innerHTML = `<a href="#teams" class="back-link">← Team profiles</a><div class="page-heading"><div><p class="eyebrow">TEAM ${team}${team === settings.team ? " / OUR TEAM" : ""}</p><h2>${team} · ${esc(t.name)}</h2><p class="lede">${season ? "Season-long evidence" : "Event evidence"} · ${s.obs.length} scouted matches · ${pct(s.reliability)} matches without breakdown</p></div><div class="button-row"><button id="season-toggle">${season ? "This event" : "Season view"}</button><a class="button primary" href="#pit/${team}">${pit ? "Edit pit record" : "Scout this pit"} →</a>${moreButton('id="team-menu"', `More actions for team ${team}`)}</div></div><div class="stat-row profile-summary">${[
     ["Avg score", s.obs.length ? fmt(s.total.average) : "—"],
     ["Auto avg", s.obs.length ? fmt(s.auto.average) : "—"],
     [
@@ -216,7 +228,7 @@ export function renderProfile(
       ]),
       "Team matches",
     ),
-  )}${section("Capabilities observed", `<div class="metric-line"><span>Sort / own NECTAR ${pct(mean(s.obs.map((o) => +o.canSort)))}</span><span>Compatibility ${fmt(mean(s.obs.map((o) => o.compatibility)))} / 5</span><span>Offense ${fmt(mean(s.obs.map((o) => o.offense)))} / 5</span><span>Defense ${pct(mean(s.obs.map((o) => +o.defense)))}</span><span>Fixed position ${pct(mean(s.obs.map((o) => +o.fixedPosition)))}</span></div>`)}${section("Pit scouting", pit ? `<div class="pit-heading"><p>${esc(pit.scout || "Scout not recorded")} · ${esc(pit.talkedAt || "Interview time not recorded")} · ${esc(new Date(pit.updatedAt).toLocaleDateString())}</p><a class="text-link" href="#pit/${team}">Edit record →</a></div>${pit.photo ? `<img class="robot-photo" src="${esc(pit.photo)}" alt="Team ${team} robot">` : ""}<div class="pit-readout">${pitSections.map((sec) => `<details><summary>${esc(sec.title)}</summary><dl>${sec.fields.map(([k, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(typeof pit.answers[k] === "boolean" ? (pit.answers[k] ? "Yes" : "No") : (pit.answers[k] ?? "Not recorded"))}</dd></div>`).join("")}</dl></details>`).join("")}</div>${pit.routes.length ? `${routeLegend()}<div class="route-readout">${pit.routes.map((r) => `<figure>${fieldSVG([{ route: r }])}<figcaption>${esc(r.label)}${r.start && r.start !== r.label ? ` · ${esc(r.start)}` : ""}<button data-route-png="${esc(r.id)}" class="icon-button" aria-label="Export ${esc(r.label)} as PNG" title="Export PNG"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></figcaption>${r.notes ? `<p class="route-notes-text">${esc(r.notes)}</p>` : ""}</figure>`).join("")}</div><a class="text-link" href="#alliance/overlay/${team}">Overlay with our route →</a>` : '<p class="muted">No autonomous routes recorded.</p>'}` : empty("No pit record yet", "Use pit scouting to record capabilities, routes and the last-minute plan."))}${section("Team notes", `<div class="section-actions"><button class="primary" id="add-note">Add note</button></div>${notes.map((n) => `<article class="note"><p>${esc(n.text)}</p><small>${esc(n.author || "Scout")} · ${esc(new Date(n.updatedAt).toLocaleString())}</small></article>`).join("") || '<p class="muted">No team notes yet.</p>'}`)}${section("External FTCScout data", `<div class="button-row external-actions"><button id="load-external">Load season statistics & awards</button><a class="button" target="_blank" rel="noreferrer" href="https://ftcscout.org/teams/${team}">Open FTCScout ↗</a></div><div id="external-data"><p class="hint">Optional online enrichment is kept separate from local scouting evidence.</p></div>`)}`;
+  )}${section("Capabilities observed", `<div class="metric-line"><span>Sort / own NECTAR ${pct(mean(s.obs.map((o) => +o.canSort)))}</span><span>Compatibility ${fmt(mean(s.obs.map((o) => o.compatibility)))} / 5</span><span>Offense ${fmt(mean(s.obs.map((o) => o.offense)))} / 5</span><span>Defense ${pct(mean(s.obs.map((o) => +o.defense)))}</span><span>Fixed position ${pct(mean(s.obs.map((o) => +o.fixedPosition)))}</span></div>`)}${section("Pit scouting", pit ? `<div class="pit-heading"><p>${esc(pit.scout || "Scout not recorded")} · ${esc(pit.talkedAt || "Interview time not recorded")} · ${esc(new Date(pit.updatedAt).toLocaleDateString())}</p></div>${pit.photo ? `<img class="robot-photo" src="${esc(pit.photo)}" alt="Team ${team} robot">` : ""}<div class="pit-readout">${pitSections.map((sec) => `<details><summary>${esc(sec.title)}</summary><dl>${sec.fields.map(([k, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(typeof pit.answers[k] === "boolean" ? (pit.answers[k] ? "Yes" : "No") : (pit.answers[k] ?? "Not recorded"))}</dd></div>`).join("")}</dl></details>`).join("")}</div>${pit.routes.length ? `${routeLegend()}<div class="route-readout">${pit.routes.map((r) => `<figure>${fieldSVG([{ route: r }])}<figcaption>${esc(r.label)}${r.start && r.start !== r.label ? ` · ${esc(r.start)}` : ""}<button data-route-png="${esc(r.id)}" class="icon-button" aria-label="Export ${esc(r.label)} as PNG" title="Export PNG"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></figcaption>${r.notes ? `<p class="route-notes-text">${esc(r.notes)}</p>` : ""}</figure>`).join("")}</div><a class="text-link" href="#alliance/overlay/${team}">Overlay with our route →</a>` : '<p class="muted">No autonomous routes recorded.</p>'}` : empty("No pit record yet", "Use pit scouting to record capabilities, routes and the last-minute plan."), "", pit ? moreButton('id="pit-menu"', `More actions for team ${team}'s pit record`) : "")}${section("Team notes", `<div class="section-actions"><button class="primary" id="add-note">Add note</button></div>${notes.map((n) => `<article class="note"><p>${esc(n.text)}</p><small>${esc(n.author || "Scout")} · ${esc(new Date(n.updatedAt).toLocaleString())}</small>${moreButton(`data-note-menu="${esc(n.id)}"`, "More actions for this note")}</article>`).join("") || '<p class="muted">No team notes yet.</p>'}`)}${section("External FTCScout data", `<div class="button-row external-actions"><button id="load-external">Load season statistics & awards</button><a class="button" target="_blank" rel="noreferrer" href="https://ftcscout.org/teams/${team}">Open FTCScout ↗</a></div><div id="external-data"><p class="hint">Optional online enrichment is kept separate from local scouting evidence.</p></div>`)}`;
   const analysis = document.createElement("details");
   analysis.className = "profile-analysis";
   analysis.innerHTML = "<summary>Match analysis</summary>";
@@ -243,6 +255,94 @@ export function renderProfile(
   };
   root.querySelector<HTMLButtonElement>("#season-toggle")!.onclick = () =>
     renderProfile(root, team, event, !season);
+  const redraw = () => renderProfile(root, team, event, season);
+  root.querySelector<HTMLButtonElement>("#team-menu")!.onclick = async () => {
+    const action = await actionMenu(`Team ${team} · ${t.name}`, [
+      { key: "edit", label: "Edit team name" },
+      { key: "delete", label: "Delete team", danger: true },
+    ]);
+    if (action === "edit") {
+      const name = await textDialog("Edit team name", "Team name", t.name);
+      if (name && name !== t.name) {
+        await saveEntity("teams", { ...t, name });
+        redraw();
+      }
+    }
+    if (action === "delete") {
+      const r = teamRecords(database, team, event.id),
+        parts = [
+          r.observations.length &&
+            `${r.observations.length} match record${r.observations.length === 1 ? "" : "s"}`,
+          r.pits.length && "its pit record",
+          r.notes.length &&
+            `${r.notes.length} note${r.notes.length === 1 ? "" : "s"}`,
+        ].filter(Boolean);
+      if (
+        await confirmDialog(
+          `Delete team ${team}?`,
+          (team === settings.team ? "This is your own team. " : "") +
+            `${t.name} will be removed from ${event.name}` +
+            (parts.length ? `, along with ${parts.join(", ")}` : "") +
+            ". This removes it for every scout.",
+          "Delete team",
+        )
+      ) {
+        await deleteTeam(team, event.id);
+        location.hash = "#teams";
+      }
+    }
+  };
+  root
+    .querySelector<HTMLButtonElement>("#pit-menu")
+    ?.addEventListener("click", async () => {
+      const action = await actionMenu(`Team ${team} pit record`, [
+        { key: "edit", label: "Edit pit record" },
+        { key: "delete", label: "Delete pit record", danger: true },
+      ]);
+      if (action === "edit") location.hash = `#pit/${team}`;
+      if (
+        action === "delete" &&
+        pit &&
+        (await confirmDialog(
+          "Delete pit record?",
+          `Team ${team}'s pit record, including its routes and photo, will be removed for every scout.`,
+        ))
+      ) {
+        await deleteRecords([["pits", pit]]);
+        redraw();
+      }
+    });
+  root.querySelectorAll<HTMLButtonElement>("[data-note-menu]").forEach(
+    (b) =>
+      (b.onclick = async () => {
+        const note = notes.find((n) => n.id === b.dataset.noteMenu);
+        if (!note) return;
+        const action = await actionMenu("Note", [
+          { key: "edit", label: "Edit note" },
+          { key: "delete", label: "Delete note", danger: true },
+        ]);
+        if (action === "edit") {
+          const text = await textDialog("Edit note", "Team note", note.text, {
+            multiline: true,
+            maxlength: 500,
+          });
+          if (text && text !== note.text) {
+            await saveEntity("notes", { ...note, text });
+            redraw();
+          }
+        }
+        if (
+          action === "delete" &&
+          (await confirmDialog(
+            "Delete note?",
+            "This note will be removed for every scout.",
+          ))
+        ) {
+          await deleteRecords([["notes", note]]);
+          redraw();
+        }
+      }),
+  );
   root.querySelector<HTMLButtonElement>("#add-note")!.onclick = () => {
     const dialog = document.createElement("dialog");
     dialog.setAttribute("aria-labelledby", "note-title");

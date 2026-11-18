@@ -27,6 +27,106 @@ export function toast(message: string) {
   e.classList.add("visible");
   setTimeout(() => e.classList.remove("visible"), 4500);
 }
+/** The ⋯ button that opens a record's Edit / Delete menu. */
+export const moreButton = (attrs: string, label: string) =>
+  `<button type="button" class="icon-button more-button" ${attrs} aria-label="${esc(label)}" aria-haspopup="dialog"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>`;
+/**
+ * A centred dialog on top of the page. `done(value)` closes and removes it and
+ * resolves the promise; Escape and clicking the dimmed backdrop count as cancel.
+ */
+function modal<T>(
+  label: string,
+  html: string,
+  cancelled: T,
+  wire: (dialog: HTMLDialogElement, done: (value: T) => void) => void,
+): Promise<T> {
+  return new Promise((resolve) => {
+    const dialog = document.createElement("dialog");
+    dialog.className = "app-dialog";
+    dialog.setAttribute("aria-label", label);
+    dialog.innerHTML = html;
+    document.body.append(dialog);
+    let finished = false;
+    const done = (value: T) => {
+      if (finished) return;
+      finished = true;
+      if (dialog.open) dialog.close();
+      dialog.remove();
+      resolve(value);
+    };
+    dialog.addEventListener("cancel", (e) => {
+      e.preventDefault();
+      done(cancelled);
+    });
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog) done(cancelled);
+    });
+    wire(dialog, done);
+    dialog.showModal();
+  });
+}
+/** ⋯ menu: resolves to the chosen action's key, or null if cancelled. */
+export function actionMenu(
+  title: string,
+  actions: { key: string; label: string; danger?: boolean }[],
+): Promise<string | null> {
+  return modal<string | null>(
+    title,
+    `<h2>${esc(title)}</h2><div class="action-list">${actions
+      .map(
+        (a) =>
+          `<button type="button" data-action="${esc(a.key)}"${a.danger ? ' class="danger"' : ""}>${esc(a.label)}</button>`,
+      )
+      .join("")}<button type="button" data-action="">Cancel</button></div>`,
+    null,
+    (dialog, done) =>
+      dialog
+        .querySelectorAll<HTMLButtonElement>("[data-action]")
+        .forEach((b) => (b.onclick = () => done(b.dataset.action || null))),
+  );
+}
+/** Centred "are you sure" dialog for deletes. Cancel is focused by default. */
+export function confirmDialog(
+  title: string,
+  message: string,
+  confirmLabel = "Delete",
+): Promise<boolean> {
+  return modal(
+    title,
+    `<h2>${esc(title)}</h2><p>${esc(message)}</p><div class="button-row"><button type="button" data-answer="no" autofocus>Cancel</button><button type="button" data-answer="yes" class="danger">${esc(confirmLabel)}</button></div>`,
+    false,
+    (dialog, done) =>
+      dialog
+        .querySelectorAll<HTMLButtonElement>("[data-answer]")
+        .forEach((b) => (b.onclick = () => done(b.dataset.answer === "yes"))),
+  );
+}
+/** Centred dialog to edit one text value; resolves to the new text or null. */
+export function textDialog(
+  title: string,
+  label: string,
+  value: string,
+  { multiline = false, maxlength = 100 } = {},
+): Promise<string | null> {
+  const input = multiline
+    ? `<textarea name="value" rows="5" maxlength="${maxlength}" required>${esc(value)}</textarea>`
+    : `<input name="value" value="${esc(value)}" maxlength="${maxlength}" required>`;
+  return modal<string | null>(
+    title,
+    `<form><h2>${esc(title)}</h2><label class="field"><span>${esc(label)}</span>${input}</label><div class="button-row"><button type="button" data-cancel>Cancel</button><button class="primary" type="submit">Save</button></div></form>`,
+    null,
+    (dialog, done) => {
+      const form = dialog.querySelector("form")!;
+      dialog.querySelector<HTMLButtonElement>("[data-cancel]")!.onclick = () =>
+        done(null);
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const text = String(new FormData(form).get("value") ?? "").trim();
+        if (text) done(text);
+      };
+    },
+  );
+}
 export function field(
   label: string,
   name: string,
@@ -157,8 +257,14 @@ export function formValues(
 }
 export const empty = (title: string, body: string) =>
   `<div class="empty"><h3>${esc(title)}</h3></div>`;
-export function section(title: string, content: string, hint = "") {
-  return `<section class="section"><header class="section-head"><h3>${esc(plainLabel(title))}</h3></header>${content}</section>`;
+/** A titled section. `actions` (e.g. a ⋯ button) sits at the right of the title. */
+export function section(
+  title: string,
+  content: string,
+  hint = "",
+  actions = "",
+) {
+  return `<section class="section"><header class="section-head"><h3>${esc(plainLabel(title))}</h3>${actions}</header>${content}</section>`;
 }
 export function table(headers: string[], rows: string[][], label = "Data") {
   return `<div class="table-wrap" tabindex="0" role="region" aria-label="${esc(plainLabel(label))}"><table><thead><tr>${headers.map((h) => `<th scope="col">${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((c, i) => `<td${i === 0 ? ' class="first"' : ""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
