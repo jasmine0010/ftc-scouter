@@ -26,7 +26,9 @@ const team = (number, name, updatedAt) => ({
   updatedAt,
 });
 const device = (teams) => {
-  const db = createDatabase();
+  // Fixed timestamp: every simulated device starts from identical records,
+  // so only the teams each test adds can differ.
+  const db = createDatabase("2026-01-01T00:00:00.000Z");
   db.teams.push(...teams);
   return db;
 };

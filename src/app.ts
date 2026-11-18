@@ -4,6 +4,7 @@ import {
   settings,
   initialize,
   onChange,
+  onDataChange,
   persistenceError,
   saveSettings,
   sync,
@@ -150,6 +151,22 @@ async function start() {
     document.querySelector<HTMLElement>("#main")?.focus();
   };
   onChange(updateStatus);
+  // Redraw list and analysis pages when other scouts' records arrive. Forms are
+  // left alone, as is any page where someone is typing or has a dialog open.
+  onDataChange(() => {
+    const view = location.hash.replace(/^#\/?/, "").split("/")[0] || "scout";
+    if (["scout", "pit", "events"].includes(view)) return;
+    const focused = document.activeElement;
+    if (
+      focused?.closest("#main") &&
+      focused.matches("input, textarea, select, [contenteditable]")
+    )
+      return;
+    if (document.querySelector("dialog[open]")) return;
+    const y = window.scrollY;
+    shell();
+    window.scrollTo(0, y);
+  });
   window.addEventListener("hashchange", () => {
     if (location.hash === "#main") {
       document.querySelector<HTMLElement>("#main")?.focus();

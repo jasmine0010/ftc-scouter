@@ -48,6 +48,39 @@ export const onChange = (fn: () => void) => {
   listeners.add(fn);
   return () => listeners.delete(fn);
 };
+/**
+ * Fires when records arrive from elsewhere: another device (via sync) or another
+ * window on this device (via the broadcast channel). Pages listing data redraw.
+ */
+const dataListeners = new Set<() => void>();
+export const onDataChange = (fn: () => void) => {
+  dataListeners.add(fn);
+  return () => dataListeners.delete(fn);
+};
+const emitData = () => dataListeners.forEach((fn) => fn());
+/** Cheap summary that changes whenever any record is added, edited or deleted. */
+const fingerprint = (db: Database) =>
+  collections
+    .map((c) => {
+      const list = db[c] as Entity[];
+      let latest = "";
+      for (const e of list) if (e.updatedAt > latest) latest = e.updatedAt;
+      return `${c}:${list.length}:${latest}`;
+    })
+    .join("|");
+// Same-device windows tell each other about saves; created in the browser only.
+let channel: BroadcastChannel | undefined;
+function listenToOtherWindows() {
+  if (typeof BroadcastChannel === "undefined") return;
+  channel = new BroadcastChannel("curiosity-biobuzz");
+  channel.onmessage = async () => {
+    const saved = await get<Database>("database");
+    if (!saved || fingerprint(saved) === fingerprint(database)) return;
+    database = saved;
+    emit();
+    emitData();
+  };
+}
 const emit = () => listeners.forEach((f) => f());
 async function get<T>(key: string): Promise<T | undefined> {
   return new Promise((resolve, reject) => {
@@ -74,6 +107,7 @@ export async function initialize() {
     r.onerror = () => reject(r.error);
   });
   database = (await get<Database>("database")) ?? createDatabase();
+  listenToOtherWindows();
   settings = (await get<Settings>("settings")) ?? settings;
   await persist();
   if (!active(database.events).some((event) => event.id === settings.eventId))
@@ -103,6 +137,7 @@ export async function persist() {
       tx.onabort = () => reject(tx.error);
     });
     persistenceError = "";
+    channel?.postMessage("saved");
   } catch (e) {
     persistenceError =
       "Local save failed. Export your data now; browser storage may be full.";
@@ -352,9 +387,11 @@ export async function sync() {
     if (!response.ok) throw new Error(String(response.status));
     const data: unknown = await response.json();
     validateDatabase(data);
+    const before = fingerprint(database);
     database = mergeDatabases(database, data);
     await persist();
     syncState = "Synced";
+    if (fingerprint(database) !== before) emitData();
   } catch {
     syncState = "Local · sync pending";
   } finally {
