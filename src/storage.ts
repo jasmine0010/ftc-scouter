@@ -379,9 +379,7 @@ export async function sync() {
       signal: AbortSignal.timeout(12000),
     });
     if (response.status === 401) {
-      syncState = settings.teamCode
-        ? "Wrong team code · saved on this device"
-        : "Team code needed · saved on this device";
+      syncState = "Wrong team code";
       return;
     }
     if (!response.ok) throw new Error(String(response.status));
