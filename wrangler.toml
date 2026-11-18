@@ -3,6 +3,9 @@
 name = "curiosity-scout-sync"
 main = "worker/index.mjs"
 compatibility_date = "2025-06-01"
+# Serve at https://curiosity-scout-sync.<subdomain>.workers.dev; no extra preview URLs.
+workers_dev = true
+preview_urls = false
 
 [[durable_objects.bindings]]
 name = "TEAM_STORE"
