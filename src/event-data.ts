@@ -9,6 +9,7 @@ import {
   type OfficialResult,
 } from "./types.js";
 import {
+  apiUrl,
   database,
   settings,
   parseCSV,
@@ -20,6 +21,7 @@ import {
   saveEntity,
   saveSettings,
   sync,
+  teamHeaders,
 } from "./storage.js";
 import { esc, field, formValues, section, toast } from "./ui.js";
 export const scheduleColumns = [
@@ -166,7 +168,7 @@ export async function importTeams(csv: string, event: Event) {
   return rows.length;
 }
 export function renderEventData(root: HTMLElement, event: Event) {
-  root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">EVENT OPERATIONS</p><h1>Event data.</h1><p class="lede">Import the roster and schedule. Scout offline. Merge observations when connected.</p></div></div>${section("Current event", `<form id="event-settings" class="form-grid">${field("Event name", "name", event.name, "text", "required")}${field("Event code (optional for CSV)", "code", event.code, "text")}${field("Season start year", "season", event.season, "number", 'min="2026" max="2099" required')}${field("SWARM threshold", "swarm", event.thresholds.swarm, "number", 'min="0" required')}${field("POLLINATOR 1 threshold", "pollinator1", event.thresholds.pollinator1, "number", 'min="0" required')}${field("POLLINATOR 2 threshold", "pollinator2", event.thresholds.pollinator2, "number", 'min="0" required')}<div class="button-row wide"><button type="submit" class="primary">Save event settings</button><button type="button" id="new-event">Create a new event</button></div></form><p class="hint">All Other Events defaults are ${GAME.thresholds.swarm} / ${GAME.thresholds.pollinator1} / ${GAME.thresholds.pollinator2}. Set published Championship thresholds for your event.</p>`)}${section("Schedule & results", `<div class="button-row"><button id="api-import" class="primary">Import from FTC Events API</button><button id="schedule-export">Export schedule CSV</button><button id="template-export">Download CSV templates</button></div><p class="hint">API credentials stay on the server: FTC_API_USERNAME and FTC_API_TOKEN. No credentials are bundled. Data publication depends on the event upload.</p><a class="text-link" href="https://ftc-events.firstinspires.org/services/API" target="_blank" rel="noreferrer">FIRST API information ↗</a><div class="import-grid"><label class="field"><span>Roster CSV · number,name</span><input type="file" id="roster-file" accept=".csv,text/csv"></label><label class="field"><span>Schedule / results CSV</span><input type="file" id="schedule-file" accept=".csv,text/csv"></label></div><p class="hint">Completed matches need scores, foul points, movement points, TIPs and AUTO points for both alliances. Leave scores empty for future matches. Optional RP overrides, DQs and surrogate teams are preserved.</p><details><summary>Schedule CSV columns</summary><code class="schema">${scheduleColumns.join(", ")}</code></details><div id="event-error" class="errors" role="alert"></div>`)}${section("Scout datasets", `<div class="button-row"><button id="export-json" class="primary">Export all JSON</button><button id="export-csv">Export all CSV</button><button id="sync-now">Sync now</button></div><label class="field"><span>Merge another scout's JSON or dataset CSV</span><input type="file" id="dataset-file" accept=".json,.csv,application/json,text/csv"></label><p class="hint">Exports include every event, match, pit photo and vector route. Merges use canonical team/match identities and latest timestamps; repeated imports do not create duplicates. Exported dataset CSV contains a lossless JSON data column.</p><p class="hint">Local server sync is automatic while connected. On static hosting, use dataset exports or configure the same-origin /api/sync endpoint. This app makes no claim that an offline record has reached another device.</p>`)}${section(
+  root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">EVENT OPERATIONS</p><h1>Event data.</h1><p class="lede">Import the roster and schedule. Scout offline. Merge observations when connected.</p></div></div>${section("Current event", `<form id="event-settings" class="form-grid">${field("Event name", "name", event.name, "text", "required")}${field("Event code (optional for CSV)", "code", event.code, "text")}${field("Season start year", "season", event.season, "number", 'min="2026" max="2099" required')}${field("SWARM threshold", "swarm", event.thresholds.swarm, "number", 'min="0" required')}${field("POLLINATOR 1 threshold", "pollinator1", event.thresholds.pollinator1, "number", 'min="0" required')}${field("POLLINATOR 2 threshold", "pollinator2", event.thresholds.pollinator2, "number", 'min="0" required')}<div class="button-row wide"><button type="submit" class="primary">Save event settings</button><button type="button" id="new-event">Create a new event</button></div></form><p class="hint">All Other Events defaults are ${GAME.thresholds.swarm} / ${GAME.thresholds.pollinator1} / ${GAME.thresholds.pollinator2}. Set published Championship thresholds for your event.</p>`)}${section("Schedule & results", `<div class="button-row"><button id="api-import" class="primary">Import from FTC Events API</button><button id="schedule-export">Export schedule CSV</button><button id="template-export">Download CSV templates</button></div><p class="hint">API credentials stay on the server: FTC_API_USERNAME and FTC_API_TOKEN. No credentials are bundled. Data publication depends on the event upload.</p><a class="text-link" href="https://ftc-events.firstinspires.org/services/API" target="_blank" rel="noreferrer">FIRST API information ↗</a><div class="import-grid"><label class="field"><span>Roster CSV · number,name</span><input type="file" id="roster-file" accept=".csv,text/csv"></label><label class="field"><span>Schedule / results CSV</span><input type="file" id="schedule-file" accept=".csv,text/csv"></label></div><p class="hint">Completed matches need scores, foul points, movement points, TIPs and AUTO points for both alliances. Leave scores empty for future matches. Optional RP overrides, DQs and surrogate teams are preserved.</p><details><summary>Schedule CSV columns</summary><code class="schema">${scheduleColumns.join(", ")}</code></details><div id="event-error" class="errors" role="alert"></div>`)}${section("Scout datasets", `<div class="button-row"><button id="export-json" class="primary">Export all JSON</button><button id="export-csv">Export all CSV</button><button id="sync-now">Sync now</button></div><label class="field"><span>Team sync code</span><input id="team-code" type="password" autocomplete="off" value="${esc(settings.teamCode ?? "")}" placeholder="Ask your scouting lead"></label><label class="field"><span>Merge another scout's JSON or dataset CSV</span><input type="file" id="dataset-file" accept=".json,.csv,application/json,text/csv"></label><p class="hint">Exports include every event, match, pit photo and vector route. Merges use canonical team/match identities and latest timestamps; repeated imports do not create duplicates. Exported dataset CSV contains a lossless JSON data column.</p><p class="hint">Local server sync is automatic while connected. On static hosting, use dataset exports or configure the same-origin /api/sync endpoint. This app makes no claim that an offline record has reached another device.</p>`)}${section(
     "Season view",
     `<div id="season-list">${active(database.events)
       .map(
@@ -238,6 +240,12 @@ export function renderEventData(root: HTMLElement, event: Event) {
   };
   root.querySelector<HTMLButtonElement>("#sync-now")!.onclick = () =>
     void sync();
+  root.querySelector<HTMLInputElement>("#team-code")!.onchange = async (e) => {
+    await saveSettings({
+      teamCode: (e.target as HTMLInputElement).value.trim(),
+    });
+    void sync();
+  };
   for (const [id, handler] of [
     ["roster-file", (text: string) => importTeams(text, event)],
     ["schedule-file", (text: string) => importSchedule(text, event)],
@@ -276,7 +284,10 @@ export function renderEventData(root: HTMLElement, event: Event) {
   root.querySelector<HTMLButtonElement>("#api-import")!.onclick = async () => {
     try {
       const response = await fetch(
-        `/api/ftc?season=${event.season}&event=${encodeURIComponent(event.code)}`,
+        apiUrl(
+          `/api/ftc?season=${event.season}&event=${encodeURIComponent(event.code)}`,
+        ),
+        { headers: teamHeaders() },
       );
       const data = (await response.json()) as Record<string, unknown>;
       if (!response.ok)

@@ -26,7 +26,7 @@ The first visit starts with Curiosity (11770) and an empty event. Import an even
 The four top tabs follow the previous scouter: Scout Form, Pit Scouting, Rankings & Data, Team Profiles. Event tools in the header contains event selection, our team number, Alliance, standings, the rank simulator, pit coverage, imports and Reference.
 
 - **Rankings & data:** Teams and Matches views with shared filters and sortable tables. Match records include score breakdowns and the event schedule.
-- **Scout form:** one scrolling form in the legacy section order, with a live score above it and Save below; one canonical observation per team/match/event, accessible steppers, explicit early-NECTAR fouls, breakdowns, loading notes and compatibility observations. A separate shared field-outcome editor records four FLOWERs plus both CELL and GARDEN totals.
+- **Scout form:** one scrolling form in the legacy section order, with a live score above it and Save below; one canonical observation per team/match/event, Scored/Missed shot counters, accessible steppers, a short End section (Flowers placed, Park, minor/major fouls, Stopped working, tap-to-pick compatibility, one Notes box). Early NECTAR is counted under Major fouls; bottom bonuses come from the shared field outcome. Older matches keep their recorded early-NECTAR, bottom-bonus, breakdown and loading-note values. A separate shared field-outcome editor records four FLOWERs plus both CELL and GARDEN totals.
 - **Pit scouting:** team info → vector field drawing → questionnaire, in the old section sequence. Known teams autofill; existing pit records open for editing. Every quantity is numeric. Photos compress to JPEG at up to 1000px. Named routes support touch/stylus, undo, clear and PNG export.
 - **Team profiles:** category mean/median/best/population SD, selectable category trends, OPR-style comparison, pit/match disagreements, pit answers, route drawings, notes and optional online FTCScout enrichment. Season view combines match evidence and notes across events; OPR stays event-specific.
 - **Alliance desk:** partner projections and RP probabilities, role complementarity, route overlays, four-team head-to-head simulation, editable pick tiers, taken/available status, drag ordering and keyboard reorder buttons.
@@ -52,7 +52,7 @@ Fouls add to the opponent's official score. The form displays earned points with
 
 POLLEN and NECTAR can circulate through the HIVE more than once. Cumulative launch and delivery counts may exceed inventory. The app validates the **sum of final locations**, independently for 40 POLLEN, 8 red NECTAR and 8 blue NECTAR. Unscored elements may remain on the floor.
 
-Per-robot placements and deliveries are action counts, not automatically score. Separate attributed final CELL/FLOWER/GARDEN counts support individual contribution estimates. Team attribution is a scouting judgment; it is not an official robot score.
+A robot's scout records only live actions they can see: shots **Scored** and **Missed** (AUTO and TeleOp, no POLLEN/NECTAR split), HIVE TIPs, GARDEN drops and FLOWER placements. Shots scored estimate that robot's CELL points, FLOWER placements its FLOWER points and GARDEN drops its GARDEN points; Scored ÷ (Scored + Missed) is its accuracy. These are scouting estimates, not official robot scores. Matches scouted with the earlier form, which recorded end-of-match CELL/FLOWER/GARDEN counts per robot, keep using those counts (`robotCounts` in `src/scoring.ts`).
 
 Shared board snapshots are stored **once per event/match**. Each FLOWER records owner, POLLEN and both NECTAR counts, plus independent bottom bonuses for each alliance. The snapshot determines alliance end-state scoring once; partner observation counts are never added again. A confirmed shared board and all four observations are needed to derive a scouted alliance result. Imported official results have precedence.
 
@@ -99,6 +99,8 @@ Leave both scores blank for future matches. Completed matches require final scor
 Merges resolve observations by event/match/team, pits and picks by event/team, teams by number, and other entities by ID. The newest timestamp wins; exact timestamp ties use deterministic serialized ordering. Repeated imports are idempotent. Synchronize device clocks before the event. Concurrent edits to the **same** canonical record use last-write-wins rather than field-level merging; export disputed versions before reconciling them.
 
 ## Offline storage and sync
+
+**Online for the whole team:** host the app on GitHub Pages and share saves through a free Cloudflare Worker. Step-by-step guide: [docs/DEPLOY.md](docs/DEPLOY.md). Each device enters a shared team code once (Event data → Team sync code).
 
 Records, compressed photos, settings and drafts live in IndexedDB. The service worker caches the app, modules, fonts and field graphic after the first successful load. Test offline **after** that first load. Service workers require HTTPS or localhost; plain HTTP on a LAN address does not provide the offline page cache.
 

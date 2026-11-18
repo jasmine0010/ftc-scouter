@@ -42,7 +42,12 @@ export interface Phase {
   garden: number;
   flowerPlaced: number;
   gardenDelivered: number;
+  /** Shots that went in. Optional: matches scouted before Scored/Missed lack it. */
+  scored?: number;
+  /** Shots that did not go in. */
+  missed?: number;
 }
+export type Stopped = "no" | "briefly" | "most";
 export interface Observation extends Entity {
   eventId: string;
   match: number;
@@ -57,6 +62,8 @@ export interface Observation extends Entity {
   earlyNectar: number;
   breakdown: boolean;
   downtime: number;
+  /** "Stopped working?" answer. Optional: older matches only recorded `breakdown`. */
+  stopped?: Stopped;
   canSort: boolean;
   offense: number;
   defense: boolean;
@@ -101,12 +108,55 @@ export interface Point {
   x: number;
   y: number;
 }
+export type RouteMarkType = "intake" | "launch";
+export interface RouteMark extends Point {
+  type: RouteMarkType;
+  /** Number of strokes drawn before this mark; orders marks among strokes. */
+  at: number;
+}
 export interface Route {
   id: string;
   label: string;
   start: string;
   paths: Point[][];
+  /** AUTO action stamps. Optional so routes saved before marks still load. */
+  marks?: RouteMark[];
+  /** Robot centre at the start of AUTO; always the first thing placed. */
+  origin?: Point;
+  /** Scout's description of this route; edited on the drawing and analysis steps. */
+  notes?: string;
 }
+export type RouteStep =
+  | { kind: "path"; n: number; path: Point[] }
+  | { kind: "mark"; n: number; mark: RouteMark };
+/** Strokes and marks in the order they were added, numbered from 1. */
+export function routeSequence(route: Route): RouteStep[] {
+  const marks = route.marks ?? [],
+    steps: RouteStep[] = [];
+  const addMarks = (at: number) =>
+    marks
+      .filter((m) => m.at === at)
+      .forEach((mark) =>
+        steps.push({ kind: "mark", n: steps.length + 1, mark }),
+      );
+  route.paths.forEach((path, i) => {
+    addMarks(i);
+    steps.push({ kind: "path", n: steps.length + 1, path });
+  });
+  for (let at = route.paths.length; marks.some((m) => m.at >= at); at++)
+    addMarks(at);
+  return steps;
+}
+/** Removes whichever stroke or mark was added last. */
+export function undoRouteStep(route: Route) {
+  const marks = route.marks ?? [],
+    last = marks[marks.length - 1];
+  if (last && last.at >= route.paths.length) marks.pop();
+  else if (route.paths.length) route.paths.pop();
+  else delete route.origin;
+}
+export const routeIsEmpty = (route: Route) =>
+  !route.paths.length && !route.marks?.length && !route.origin;
 export type PitAnswers = Record<string, string | number | boolean>;
 export interface Pit extends Entity {
   eventId: string;
@@ -135,6 +185,8 @@ export interface Settings {
   team: number;
   eventId: string;
   syncUrl: string;
+  /** Shared team passcode sent with every sync; set once per device. */
+  teamCode?: string;
 }
 export interface Database {
   schemaVersion: 1;
@@ -178,6 +230,8 @@ export const phase = (): Phase => ({
   garden: 0,
   flowerPlaced: 0,
   gardenDelivered: 0,
+  scored: 0,
+  missed: 0,
 });
 export const blankObservation = (
   eventId: string,

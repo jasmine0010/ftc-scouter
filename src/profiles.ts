@@ -1,7 +1,7 @@
 import { eventOPR, mean, pitDisagreements, teamStats } from "./analytics.js";
-import { scoreObservation } from "./scoring.js";
+import { scoreObservation, robotCounts, shotAccuracy } from "./scoring.js";
 import { active, now, uid, type Event } from "./types.js";
-import { database, settings, saveEntity } from "./storage.js";
+import { apiUrl, database, settings, saveEntity } from "./storage.js";
 import { pitSections } from "./pit.js";
 import {
   empty,
@@ -17,6 +17,7 @@ import {
   table,
   textArea,
   toast,
+  routeLegend,
 } from "./ui.js";
 export function renderDirectory(root: HTMLElement, event: Event) {
   let query = "";
@@ -182,20 +183,14 @@ export function renderProfile(
         : "—",
     ],
     [
-      "Avg elements",
+      "Avg shots",
       s.obs.length
-        ? fmt(
-            mean(
-              s.obs.map(
-                (observation) =>
-                  observation.auto.pollen +
-                  observation.auto.nectar +
-                  observation.tele.pollen +
-                  observation.tele.nectar,
-              ),
-            ),
-          )
+        ? fmt(mean(s.obs.map((observation) => robotCounts(observation).shots)))
         : "—",
+    ],
+    [
+      "Accuracy",
+      shotAccuracy(s.obs) === null ? "—" : pct(shotAccuracy(s.obs)!),
     ],
   ]
     .map(
@@ -221,7 +216,7 @@ export function renderProfile(
       ]),
       "Team matches",
     ),
-  )}${section("Capabilities observed", `<div class="metric-line"><span>Sort / own NECTAR ${pct(mean(s.obs.map((o) => +o.canSort)))}</span><span>Compatibility ${fmt(mean(s.obs.map((o) => o.compatibility)))} / 5</span><span>Offense ${fmt(mean(s.obs.map((o) => o.offense)))} / 5</span><span>Defense ${pct(mean(s.obs.map((o) => +o.defense)))}</span><span>Fixed position ${pct(mean(s.obs.map((o) => +o.fixedPosition)))}</span></div>`)}${section("Pit scouting", pit ? `<div class="pit-heading"><p>${esc(pit.scout || "Scout not recorded")} · ${esc(pit.talkedAt || "Interview time not recorded")} · ${esc(new Date(pit.updatedAt).toLocaleDateString())}</p><a class="text-link" href="#pit/${team}">Edit record →</a></div>${pit.photo ? `<img class="robot-photo" src="${esc(pit.photo)}" alt="Team ${team} robot">` : ""}<div class="pit-readout">${pitSections.map((sec) => `<details><summary>${esc(sec.title)}</summary><dl>${sec.fields.map(([k, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(typeof pit.answers[k] === "boolean" ? (pit.answers[k] ? "Yes" : "No") : (pit.answers[k] ?? "Not recorded"))}</dd></div>`).join("")}</dl></details>`).join("")}</div>${pit.routes.length ? `<div class="route-readout">${pit.routes.map((r) => `<figure>${fieldSVG([{ route: r }])}<figcaption>${esc(r.label)} · ${esc(r.start)}<button data-route-png="${esc(r.id)}">Export PNG</button></figcaption></figure>`).join("")}</div><a class="text-link" href="#alliance/overlay/${team}">Overlay with our route →</a>` : '<p class="muted">No autonomous routes recorded.</p>'}` : empty("No pit record yet", "Use pit scouting to record capabilities, routes and the last-minute plan."))}${section("Team notes", `<div class="section-actions"><button class="primary" id="add-note">Add note</button></div>${notes.map((n) => `<article class="note"><p>${esc(n.text)}</p><small>${esc(n.author || "Scout")} · ${esc(new Date(n.updatedAt).toLocaleString())}</small></article>`).join("") || '<p class="muted">No team notes yet.</p>'}`)}${section("External FTCScout data", `<button id="load-external">Load season statistics & awards</button><a class="text-link" target="_blank" rel="noreferrer" href="https://ftcscout.org/teams/${team}">Open FTCScout ↗</a><div id="external-data"><p class="hint">Optional online enrichment is kept separate from local scouting evidence.</p></div>`)}`;
+  )}${section("Capabilities observed", `<div class="metric-line"><span>Sort / own NECTAR ${pct(mean(s.obs.map((o) => +o.canSort)))}</span><span>Compatibility ${fmt(mean(s.obs.map((o) => o.compatibility)))} / 5</span><span>Offense ${fmt(mean(s.obs.map((o) => o.offense)))} / 5</span><span>Defense ${pct(mean(s.obs.map((o) => +o.defense)))}</span><span>Fixed position ${pct(mean(s.obs.map((o) => +o.fixedPosition)))}</span></div>`)}${section("Pit scouting", pit ? `<div class="pit-heading"><p>${esc(pit.scout || "Scout not recorded")} · ${esc(pit.talkedAt || "Interview time not recorded")} · ${esc(new Date(pit.updatedAt).toLocaleDateString())}</p><a class="text-link" href="#pit/${team}">Edit record →</a></div>${pit.photo ? `<img class="robot-photo" src="${esc(pit.photo)}" alt="Team ${team} robot">` : ""}<div class="pit-readout">${pitSections.map((sec) => `<details><summary>${esc(sec.title)}</summary><dl>${sec.fields.map(([k, l]) => `<div><dt>${esc(l)}</dt><dd>${esc(typeof pit.answers[k] === "boolean" ? (pit.answers[k] ? "Yes" : "No") : (pit.answers[k] ?? "Not recorded"))}</dd></div>`).join("")}</dl></details>`).join("")}</div>${pit.routes.length ? `${routeLegend()}<div class="route-readout">${pit.routes.map((r) => `<figure>${fieldSVG([{ route: r }])}<figcaption>${esc(r.label)}${r.start && r.start !== r.label ? ` · ${esc(r.start)}` : ""}<button data-route-png="${esc(r.id)}" class="icon-button" aria-label="Export ${esc(r.label)} as PNG" title="Export PNG"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></figcaption>${r.notes ? `<p class="route-notes-text">${esc(r.notes)}</p>` : ""}</figure>`).join("")}</div><a class="text-link" href="#alliance/overlay/${team}">Overlay with our route →</a>` : '<p class="muted">No autonomous routes recorded.</p>'}` : empty("No pit record yet", "Use pit scouting to record capabilities, routes and the last-minute plan."))}${section("Team notes", `<div class="section-actions"><button class="primary" id="add-note">Add note</button></div>${notes.map((n) => `<article class="note"><p>${esc(n.text)}</p><small>${esc(n.author || "Scout")} · ${esc(new Date(n.updatedAt).toLocaleString())}</small></article>`).join("") || '<p class="muted">No team notes yet.</p>'}`)}${section("External FTCScout data", `<div class="button-row external-actions"><button id="load-external">Load season statistics & awards</button><a class="button" target="_blank" rel="noreferrer" href="https://ftcscout.org/teams/${team}">Open FTCScout ↗</a></div><div id="external-data"><p class="hint">Optional online enrichment is kept separate from local scouting evidence.</p></div>`)}`;
   const analysis = document.createElement("details");
   analysis.className = "profile-analysis";
   analysis.innerHTML = "<summary>Match analysis</summary>";
@@ -302,7 +297,7 @@ export function renderProfile(
       const target = root.querySelector("#external-data")!;
       target.textContent = "Loading external data…";
       try {
-        const response = await fetch(`/api/ftcscout?team=${team}`);
+        const response = await fetch(apiUrl(`/api/ftcscout?team=${team}`));
         const result = (await response.json()) as {
           error?: string;
           stats?: unknown;

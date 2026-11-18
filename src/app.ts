@@ -19,11 +19,32 @@ import { renderReference } from "./reference.js";
 import { cleanView } from "./presentation.js";
 import { esc, toast } from "./ui.js";
 const app = document.querySelector<HTMLElement>("#app")!;
+// [route, full label, short phone label, outline icon paths]
 const navigation = [
-  ["scout", "Scout Form"],
-  ["pit", "Pit Scouting"],
-  ["rankings", "Rankings & Data"],
-  ["teams", "Team Profiles"],
+  [
+    "scout",
+    "Scout Form",
+    "Match",
+    '<rect x="5" y="4" width="14" height="17" rx="1.5"/><path d="M9 3h6v3H9zM8.5 11h7M8.5 15h5"/>',
+  ],
+  [
+    "pit",
+    "Pit Scouting",
+    "Pit",
+    '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-2.4z"/>',
+  ],
+  [
+    "rankings",
+    "Rankings & Data",
+    "Ranks",
+    '<path d="M3 20h18M6 20v-8M12 20V5M18 20v-5"/>',
+  ],
+  [
+    "teams",
+    "Team Profiles",
+    "Teams",
+    '<circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0M16 5.3a3 3 0 0 1 0 5.4M17.5 14.5A5.5 5.5 0 0 1 20.5 20"/>',
+  ],
 ];
 let viewObserver: MutationObserver | undefined;
 function currentEvent(): Event {
@@ -39,7 +60,7 @@ function shell() {
   viewObserver?.disconnect();
   const selected =
     view === "team" ? "teams" : view === "coverage" ? "pit" : view;
-  app.innerHTML = `<header class="hub-header"><a href="#scout" class="hub-title"><img src="/team-logo.svg" width="36" height="36" alt=""><h1>FTC BIOBUZZ Scout Hub</h1></a><nav class="hub-nav" aria-label="Main navigation">${navigation.map(([key, label]) => `<a href="#${key}"${selected === key ? ' aria-current="page"' : ""}>${label}</a>`).join("")}</nav><div class="hub-context"><span id="sync-status" class="sync-dot" role="img"></span><details class="event-tools"><summary aria-label="Event tools"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="7" cy="18" r="2"/></svg></summary><div class="tools-panel"><label class="field"><span>Event</span><select id="event-select" aria-label="Current event">${active(
+  app.innerHTML = `<header class="hub-header"><a href="#scout" class="hub-title"><img src="./team-logo.svg" width="36" height="36" alt="Curiosity 11770"><h1>Scout Hub</h1></a><nav class="hub-nav" aria-label="Main navigation">${navigation.map(([key, label, short, icon]) => `<a href="#${key}"${selected === key ? ' aria-current="page"' : ""}><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><span class="nav-long">${label}</span><span class="nav-short" aria-hidden="true">${short}</span></a>`).join("")}</nav><div class="hub-context"><span id="sync-status" class="sync-dot" role="img"></span><details class="event-tools"><summary aria-label="Event tools"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="7" cy="18" r="2"/></svg></summary><div class="tools-panel"><label class="field"><span>Event</span><select id="event-select" aria-label="Current event">${active(
     database.events,
   )
     .map(
@@ -143,7 +164,7 @@ async function start() {
   void sync();
   if ("serviceWorker" in navigator)
     void navigator.serviceWorker
-      .register("/sw.js")
+      .register("./sw.js")
       .catch(() =>
         toast("Offline page cache unavailable; local records still save."),
       );

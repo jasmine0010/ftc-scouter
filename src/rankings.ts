@@ -1,5 +1,5 @@
 import { mean, simulateRanks, standings, teamStats } from "./analytics.js";
-import { scoreObservation, deriveResults } from "./scoring.js";
+import { scoreObservation, deriveResults, shotAccuracy } from "./scoring.js";
 import { active, type Event } from "./types.js";
 import { GAME } from "./game.js";
 import { database, settings, observationCSV, exportFile } from "./storage.js";
@@ -117,21 +117,9 @@ export function renderRankings(
                 (s) => s.categories.telePark + s.categories.bottom,
               ),
             ),
-            elements: mean(
-              stats.obs.map(
-                (o) =>
-                  o.auto.pollen + o.auto.nectar + o.tele.pollen + o.tele.nectar,
-              ),
-            ),
-            maxTips: Math.max(
-              0,
-              ...stats.obs.map((o) => o.auto.tips + o.tele.tips),
-            ),
-            maxFlower: Math.max(0, ...stats.obs.map((o) => o.tele.flower)),
-            maxGarden: Math.max(0, ...stats.obs.map((o) => o.tele.garden)),
+            tips: stats.tips.average,
+            accuracy: shotAccuracy(stats.obs),
             compat: mean(stats.obs.map((o) => o.compatibility)),
-            sd: stats.total.sd,
-            sort: mean(stats.obs.map((o) => +o.canSort)),
             filterTele: stats.tele.average,
           };
         })
@@ -139,8 +127,8 @@ export function renderRankings(
           matchesFilters(team.team, team.auto, team.filterTele, team.average),
         )
         .sort((a, b) => {
-          const left = a[sort as keyof typeof a],
-            right = b[sort as keyof typeof b];
+          const left = a[sort as keyof typeof a] ?? -1,
+            right = b[sort as keyof typeof b] ?? -1;
           return (
             direction *
             (typeof left === "string"
@@ -149,22 +137,17 @@ export function renderRankings(
           );
         });
       const columns = [
-        ["team", "Team #"],
-        ["name", "Team name"],
+        ["team", "Team"],
         ["n", "Matches"],
         ["average", "Avg score"],
-        ["auto", "Auto avg"],
-        ["tele", "TeleOp avg"],
-        ["end", "End game avg"],
-        ["elements", "Avg elements"],
-        ["maxTips", "Max hive tips"],
-        ["maxFlower", "Max flower"],
-        ["maxGarden", "Max garden"],
-        ["compat", "Avg compatibility"],
-        ["sd", "Consistency"],
-        ["sort", "Sort %"],
+        ["auto", "Auto"],
+        ["tele", "TeleOp"],
+        ["end", "End"],
+        ["tips", "Hive tips"],
+        ["accuracy", "Accuracy"],
+        ["compat", "Compatibility"],
       ];
-      content.innerHTML = `${filterMarkup()}<div class="table-wrap" tabindex="0" role="region" aria-label="Team rankings"><table class="data-table"><thead><tr>${columns.map(([key, label]) => `<th scope="col" aria-sort="${sort === key ? (direction < 0 ? "descending" : "ascending") : "none"}"><button data-sort="${key}">${label}${sort === key ? (direction < 0 ? " ↓" : " ↑") : ""}</button></th>`).join("")}<th>Actions</th></tr></thead><tbody>${rows.map((team) => `<tr${team.team === settings.team ? ' class="our-team"' : ""}><td><a href="#team/${team.team}">${team.team}</a></td><td>${esc(team.name)}</td><td>${team.n}</td>${[team.average, team.auto, team.tele, team.end, team.elements, team.maxTips, team.maxFlower, team.maxGarden, team.compat, team.sd].map((value) => `<td>${team.n ? fmt(value) : "—"}</td>`).join("")}<td>${team.n ? pct(team.sort) : "—"}</td><td><a class="button" href="#team/${team.team}">View Details</a></td></tr>`).join("")}</tbody></table></div>`;
+      content.innerHTML = `${filterMarkup()}<div class="table-wrap" tabindex="0" role="region" aria-label="Team rankings"><table class="data-table"><thead><tr>${columns.map(([key, label]) => `<th scope="col" aria-sort="${sort === key ? (direction < 0 ? "descending" : "ascending") : "none"}"><button data-sort="${key}">${label}${sort === key ? (direction < 0 ? " ↓" : " ↑") : ""}</button></th>`).join("")}</tr></thead><tbody>${rows.map((team) => `<tr${team.team === settings.team ? ' class="our-team"' : ""}><td class="team-cell"><a href="#team/${team.team}"><b>${team.team}</b> ${esc(team.name)}</a></td><td>${team.n}</td>${[team.average, team.auto, team.tele, team.end, team.tips].map((value) => `<td>${team.n ? fmt(value) : "—"}</td>`).join("")}<td>${team.accuracy === null ? "—" : pct(team.accuracy)}</td><td>${team.n ? fmt(team.compat) : "—"}</td></tr>`).join("")}</tbody></table></div>`;
       bindFilters(content, draw);
       content.querySelectorAll<HTMLButtonElement>("[data-sort]").forEach(
         (button) =>

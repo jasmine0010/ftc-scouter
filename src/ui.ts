@@ -1,5 +1,5 @@
 import { exportFile } from "./storage.js";
-import type { Route } from "./types.js";
+import { routeSequence, type Route, type RouteMarkType } from "./types.js";
 export const esc = (v: unknown) =>
   String(v ?? "").replace(
     /[&<>"']/g,
@@ -34,7 +34,10 @@ export function field(
   type = "text",
   extra = "",
 ) {
-  return `<label class="field"><span>${esc(plainLabel(label))}</span><input name="${esc(name)}" type="${type}" value="${esc(value)}" ${extra}></label>`;
+  const mark = /(^|\s)required(\s|=|$)/.test(extra)
+    ? '<span class="required-mark" aria-hidden="true"> *</span>'
+    : "";
+  return `<label class="field"><span>${esc(plainLabel(label))}${mark}</span><input name="${esc(name)}" type="${type}" value="${esc(value)}" ${extra}></label>`;
 }
 export function select(
   label: string,
@@ -57,22 +60,20 @@ export function textArea(
 ) {
   return `<label class="field wide"><span>${esc(plainLabel(label))}</span><textarea name="${esc(name)}" rows="3" ${extra}>${esc(value)}</textarea></label>`;
 }
-export function toggle(label: string, name: string, value: unknown) {
-  if (
-    [
-      "leave",
-      "autoPark",
-      "attemptTip",
-      "park",
-      "auto.leave",
-      "auto.park",
-      "tele.park",
-    ].includes(name)
-  ) {
-    return `<label class="yes-no-row"><input type="checkbox" name="${esc(name)}"${checked(value)}><span>${esc(plainLabel(label))}</span><strong class="yes-no-state" aria-hidden="true">${value ? "Yes" : "No"}</strong></label>`;
-  }
-  return `<label class="toggle"><span>${esc(plainLabel(label))}</span><input type="checkbox" name="${esc(name)}"${checked(value)}><span class="toggle-ui" aria-hidden="true"></span></label>`;
+/** A row of large tap targets backed by radio inputs (one answer). */
+export function choices(
+  label: string,
+  name: string,
+  value: unknown,
+  options: [string, string][],
+) {
+  return `<fieldset class="choice-group"><legend>${esc(plainLabel(label))}</legend><div>${options.map(([v, text]) => `<label><input type="radio" name="${esc(name)}" value="${esc(v)}"${String(value) === v ? " checked" : ""}><span>${esc(text)}</span></label>`).join("")}</div></fieldset>`;
 }
+export function toggle(label: string, name: string, value: unknown) {
+  return `<label class="yes-no-row"><input type="checkbox" name="${esc(name)}"${checked(value)}><span>${esc(plainLabel(label))}</span><strong class="yes-no-state" aria-hidden="true">${value ? "Yes" : "No"}</strong></label>`;
+}
+/** Characters in a counter value; the stepper's number box is that many characters wide. */
+const digits = (value: unknown) => Math.max(1, String(value).length);
 export function counter(
   label: string,
   name: string,
@@ -82,10 +83,15 @@ export function counter(
 ) {
   const icon = (plus: boolean) =>
     `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14${plus ? "M12 5v14" : ""}"/></svg>`;
-  return `<label class="counter"><span>${esc(plainLabel(label))}</span><span class="stepper"><button type="button" data-step="-${step}" data-for="${esc(name)}" aria-label="Decrease ${esc(plainLabel(label))}">${icon(false)}</button><input type="number" inputmode="${step < 1 ? "decimal" : "numeric"}" name="${esc(name)}" value="${esc(value ?? 0)}" min="0" max="${max}" step="${step}" aria-label="${esc(plainLabel(label))}"><button type="button" data-step="${step}" data-for="${esc(name)}" aria-label="Increase ${esc(plainLabel(label))}">${icon(true)}</button></span></label>`;
+  return `<label class="counter"><span>${esc(plainLabel(label))}</span><span class="stepper"><button type="button" data-step="-${step}" data-for="${esc(name)}" aria-label="Decrease ${esc(plainLabel(label))}">${icon(false)}</button><input type="number" inputmode="${step < 1 ? "decimal" : "numeric"}" name="${esc(name)}" value="${esc(value ?? 0)}" style="--digits: ${digits(value ?? 0)}" min="0" max="${max}" step="${step}" aria-label="${esc(plainLabel(label))}"><button type="button" data-step="${step}" data-for="${esc(name)}" aria-label="Increase ${esc(plainLabel(label))}">${icon(true)}</button></span></label>`;
 }
 export function bindSteppers(root: HTMLElement) {
-  const refresh = () =>
+  const refresh = () => {
+    root
+      .querySelectorAll<HTMLInputElement>(".stepper input")
+      .forEach((input) =>
+        input.style.setProperty("--digits", String(digits(input.value))),
+      );
     root.querySelectorAll<HTMLButtonElement>("[data-step]").forEach((b) => {
       const input = root.querySelector<HTMLInputElement>(
         `[name="${b.dataset.for}"]`,
@@ -96,6 +102,7 @@ export function bindSteppers(root: HTMLElement) {
             ? Number(input.value) <= Number(input.min || 0)
             : Number(input.value) >= Number(input.max || Infinity);
     });
+  };
   root.addEventListener("input", () => {
     refresh();
     root
@@ -174,28 +181,58 @@ export function sparkline(
 }
 const routeMarkup = (routes: { route: Route; partner?: boolean }[]) =>
   routes
-    .map(({ route, partner }) =>
-      route.paths
+    .map(({ route, partner }) => {
+      const stroke = partner ? "#beb9b6" : "#f3f1eb",
+        dot = partner ? "#f3f1eb" : "#802010",
+        ink = partner ? "#000" : "#f3f1eb";
+      const lines = route.paths
         .map(
           (path) =>
-            `<polyline points="${path.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="${partner ? "#beb9b6" : "#f3f1eb"}" stroke-width="1.4"${partner ? ' stroke-dasharray="3 2"' : ""} stroke-linecap="round" stroke-linejoin="round"/>${path[0] ? `<circle cx="${path[0].x}" cy="${path[0].y}" r="2.5" fill="${partner ? "#f3f1eb" : "#802010"}"/>` : ""}`,
+            `<polyline points="${path.map((p) => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="${stroke}" stroke-width="1.4"${partner ? ' stroke-dasharray="3 2"' : ""} stroke-linecap="round" stroke-linejoin="round"/>`,
         )
-        .join(""),
-    )
+        .join("");
+      // The starting spot is drawn as an 18-inch robot footprint.
+      const o = route.origin,
+        origin = o
+          ? `<g class="stroke-marker route-origin"><title>Start</title><rect x="${o.x - 9}" y="${o.y - 9}" width="18" height="18" rx="1.5" fill="${partner ? "rgba(190,185,182,0.18)" : "rgba(128,32,16,0.35)"}" stroke="${stroke}" stroke-width="0.9" stroke-dasharray="2.4 1.6"/><text x="${o.x}" y="${o.y}" text-anchor="middle" dominant-baseline="central" font-family="Archivo, Arial, sans-serif" font-size="4" font-weight="700" fill="${stroke}">START</text></g>`
+          : "";
+      // Numbered start markers and action stamps sit above every line.
+      const markers = routeSequence(route)
+        .map((step) => {
+          if (step.kind === "path") {
+            const p = step.path[0];
+            return p
+              ? `<g class="stroke-marker"><circle cx="${p.x}" cy="${p.y}" r="3.6" fill="${dot}" stroke="#000" stroke-width="0.5"/><text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="central" font-family="Archivo, Arial, sans-serif" font-size="4.4" font-weight="700" fill="${ink}">${step.n}</text></g>`
+              : "";
+          }
+          const { x, y, type } = step.mark,
+            launch = type === "launch";
+          return `<g class="stroke-marker route-mark"><title>${step.n}. ${launch ? "Launch" : "Intake"}</title><rect x="${x - 3.8}" y="${y - 3.8}" width="7.6" height="7.6" rx="1" fill="${launch ? "#f3f1eb" : "#000"}" stroke="${launch ? "#000" : "#f3f1eb"}" stroke-width="0.6"/><text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-family="Archivo, Arial, sans-serif" font-size="4.6" font-weight="700" fill="${launch ? "#000" : "#f3f1eb"}">${launch ? "L" : "I"}</text><text x="${x + 4.6}" y="${y - 4.2}" font-family="Archivo, Arial, sans-serif" font-size="3.2" font-weight="700" fill="#f3f1eb" stroke="#000" stroke-width="0.6" paint-order="stroke">${step.n}</text></g>`;
+        })
+        .join("");
+      return origin + lines + markers;
+    })
     .join("");
 // Image bounds preserve the existing 0–144 inch route coordinate system.
 const FIELD_ARTWORK = { x: -58.07, y: -9.02, width: 260.14, height: 165.58 };
+/** One-line key for route drawings: start footprint, path order and AUTO stamps. */
+export function routeLegend(hidden = false, stamps = true) {
+  return `<p class="route-legend"${hidden ? " hidden" : ""}><span><i class="key-start" aria-hidden="true"></i>Start</span><span><i class="key-step" aria-hidden="true">1</i>Path order</span>${stamps ? `<span><i class="tool-stamp intake" aria-hidden="true">I</i>Intake</span><span><i class="tool-stamp launch" aria-hidden="true">L</i>Launch</span>` : ""}</p>`;
+}
 export function fieldSVG(
   routes: { route: Route; partner?: boolean }[] = [],
   interactive = false,
 ) {
   const { x, y, width, height } = FIELD_ARTWORK;
-  return `<svg ${interactive ? 'id="route-canvas"' : ""} class="field-map${interactive ? " drawable" : ""}" viewBox="0 0 144 144" overflow="hidden" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Official BIOBUZZ field"><image href="/biobuzz-field.png" x="${x}" y="${y}" width="${width}" height="${height}"/><g id="route-paths">${routeMarkup(routes)}</g><g id="route-conflicts"></g></svg>`;
+  return `<svg ${interactive ? 'id="route-canvas"' : ""} class="field-map${interactive ? " drawable" : ""}" viewBox="0 0 144 144" overflow="hidden" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Official BIOBUZZ field"><image href="./biobuzz-field.png" x="${x}" y="${y}" width="${width}" height="${height}"/><g id="route-paths">${routeMarkup(routes)}</g><g id="route-conflicts"></g></svg>`;
 }
 export function bindDrawing(
   svg: SVGSVGElement,
   route: Route,
   onChange: () => void,
+  /** When it returns a stamp type, a tap places that stamp instead of drawing. */
+  stamp: () => RouteMarkType | "start" | null = () => null,
+  onStamp: () => void = onChange,
 ) {
   let drawing = false;
   const point = (e: PointerEvent) => {
@@ -213,6 +250,19 @@ export function bindDrawing(
   svg.onpointerdown = (e) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
     e.preventDefault();
+    const type = stamp();
+    if (type === "start") {
+      route.origin = point(e);
+      redraw();
+      onStamp();
+      return;
+    }
+    if (type) {
+      (route.marks ??= []).push({ ...point(e), type, at: route.paths.length });
+      redraw();
+      onStamp();
+      return;
+    }
     svg.setPointerCapture(e.pointerId);
     drawing = true;
     route.paths.push([point(e)]);
@@ -241,7 +291,7 @@ export async function exportRoutePNG(svg: SVGSVGElement, name: string) {
   const clone = svg.cloneNode(true) as SVGSVGElement;
   const sourceImage = clone.querySelector("image");
   if (sourceImage) {
-    const blob = await (await fetch("/biobuzz-field.png")).blob();
+    const blob = await (await fetch("./biobuzz-field.png")).blob();
     const data = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));

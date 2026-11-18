@@ -23,6 +23,7 @@ import {
 } from "./storage.js";
 import {
   bindSteppers,
+  choices,
   counter,
   esc,
   field,
@@ -63,10 +64,6 @@ export async function renderScout(root: HTMLElement, editId?: string) {
   ];
   const position = (value?: string) =>
     positions.some(([key]) => key === value) ? value! : "";
-  const inventory =
-    GAME.inventory.pollen +
-    GAME.inventory.redNectar +
-    GAME.inventory.blueNectar;
   const scoreMarkup = () => {
     const score = scoreObservation(observation),
       end = score.categories.telePark + score.categories.bottom;
@@ -88,6 +85,10 @@ export async function renderScout(root: HTMLElement, editId?: string) {
     }
     observation.offense = Number(observation.offense);
     observation.compatibility = Number(observation.compatibility);
+    // Older matches kept loading-zone notes separately; the form now shows one Notes box.
+    observation.loadingNotes = "";
+    if (observation.stopped)
+      observation.breakdown = observation.stopped === "most";
     root
       .querySelectorAll<HTMLInputElement>(".yes-no-row input")
       .forEach(
@@ -101,12 +102,26 @@ export async function renderScout(root: HTMLElement, editId?: string) {
     if (total) total.textContent = fmt(scoreObservation(observation).total, 0);
   };
   function render() {
-    const autoScoring = `<div class="scout-grid">${counter("Hive tips", "auto.tips", observation.auto.tips)}${counter("Pollen launched", "auto.pollen", observation.auto.pollen)}${counter("Nectar launched", "auto.nectar", observation.auto.nectar)}${counter("Flowers placed", "auto.flowerPlaced", observation.auto.flowerPlaced ?? 0)}${counter("Garden deliveries", "auto.gardenDelivered", observation.auto.gardenDelivered ?? 0)}</div>`;
-    const teleScoring = `<div class="scout-grid">${counter("Hive tips", "tele.tips", observation.tele.tips)}${counter("Pollen launched", "tele.pollen", observation.tele.pollen)}${counter("Nectar launched", "tele.nectar", observation.tele.nectar)}${counter("Flowers placed", "tele.flowerPlaced", observation.tele.flowerPlaced ?? 0)}${counter("Garden deliveries", "tele.gardenDelivered", observation.tele.gardenDelivered ?? 0)}${counter("Cell elements retained", "tele.cell", observation.tele.cell, inventory)}${counter("Owned flower elements", "tele.flower", observation.tele.flower, inventory)}${counter("Garden elements retained", "tele.garden", observation.tele.garden, inventory)}</div>`;
-    const endScoring = `<div class="scout-grid">${counter("Bottom nectar bonuses", "bottom", observation.bottom, GAME.limits.flowers)}${counter("Minor fouls", "minor", observation.minor)}${counter("Major fouls", "major", observation.major)}${counter("Early nectar in flowers", "earlyNectar", observation.earlyNectar)}</div>`;
+    const autoScoring = `<div class="scout-grid">${counter("Scored", "auto.scored", observation.auto.scored ?? 0)}${counter("Missed", "auto.missed", observation.auto.missed ?? 0)}${counter("Hive tips", "auto.tips", observation.auto.tips)}</div>`;
+    const teleScoring = `<div class="scout-grid">${counter("Scored", "tele.scored", observation.tele.scored ?? 0)}${counter("Missed", "tele.missed", observation.tele.missed ?? 0)}${counter("Hive tips", "tele.tips", observation.tele.tips)}${counter("Garden drops", "tele.gardenDelivered", observation.tele.gardenDelivered ?? 0)}</div>`;
+    const endScoring = `<div class="scout-grid">${counter("Flowers placed", "tele.flowerPlaced", observation.tele.flowerPlaced ?? 0)}${counter("Minor fouls", "minor", observation.minor)}${counter("Major fouls (incl. early nectar)", "major", observation.major)}</div>`;
     const autoRobot = `<div class="robot-controls">${yesNo("Leave", "auto.leave", observation.auto.leave)}${yesNo("Park", "auto.park", observation.auto.park)}${select("Shooting zone", "autoLaunchPosition", position(observation.autoLaunchPosition), positions)}</div>`;
     const teleRobot = `<div class="robot-controls">${select("Shooting zone", "launchPosition", position(observation.launchPosition), positions)}${yesNo("Can select nectar / sort", "canSort", observation.canSort)}${select("Offense against defense", "offense", observation.offense, ["1", "2", "3", "4", "5"])}${yesNo("Plays defense", "defense", observation.defense)}</div>`;
-    const endRobot = `<div class="robot-controls">${yesNo("Park", "tele.park", observation.tele.park)}${yesNo("Breakdown", "breakdown", observation.breakdown)}${counter("Downtime (seconds)", "downtime", observation.downtime, GAME.limits.autoSeconds + GAME.limits.teleSeconds)}${yesNo("Fixed shooting position", "fixedPosition", observation.fixedPosition)}${select("Compatibility rating", "compatibility", observation.compatibility, ["1", "2", "3", "4", "5"])}${textArea("Loading-zone execution", "loadingNotes", observation.loadingNotes)}${textArea("Notes", "note", observation.note)}</div>`;
+    const endRobot = `<div class="robot-controls">${yesNo("Park", "tele.park", observation.tele.park)}${choices(
+      "Stopped working?",
+      "stopped",
+      observation.stopped ?? (observation.breakdown ? "most" : "no"),
+      [
+        ["no", "No"],
+        ["briefly", "Briefly"],
+        ["most", "Most of match"],
+      ],
+    )}${choices(
+      "Compatibility (5 = most compatible)",
+      "compatibility",
+      observation.compatibility,
+      ["1", "2", "3", "4", "5"].map((n) => [n, n]),
+    )}${textArea("Notes", "note", [observation.note, observation.loadingNotes].filter(Boolean).join("\n"))}</div>`;
     const identity = `<div class="identity-grid">${field("Scout name", "scout", observation.scout)}${field("Match ID", "match", observation.match, "number", 'min="1" required inputmode="numeric"')}${field("Team ID", "team", observation.team, "number", 'min="1" max="999999" required inputmode="numeric" list="team-options"')}<fieldset class="alliance-selector"><legend>Alliance</legend><div>${(["red", "blue"] as const).map((color) => `<label><input type="radio" name="alliance" value="${color}"${observation.alliance === color ? " checked" : ""}><span>${color === "red" ? "Red" : "Blue"}</span></label>`).join("")}</div></fieldset></div><datalist id="team-options">${active(
       database.teams,
     )
@@ -114,7 +129,7 @@ export async function renderScout(root: HTMLElement, editId?: string) {
         (team) => `<option value="${team.number}">${esc(team.name)}</option>`,
       )
       .join("")}</datalist>`;
-    root.innerHTML = `<div class="page-heading"><h2>FTC BIOBUZZ Scout Form</h2></div><div class="live-score" id="live-score" aria-live="polite">${scoreMarkup()}</div><form id="scout-form" class="scout-form" aria-label="Match scouting"><div class="errors" id="scout-error" role="alert"></div>${identity}${section("Auto", autoScoring + autoRobot)}${section("Teleop", teleScoring + teleRobot)}${section("End", endScoring + endRobot)}<div class="match-submit"><div class="calculated-score"><span>Calculated score</span><strong id="calculated-score">${fmt(scoreObservation(observation).total, 0)}</strong></div><button type="submit" class="primary">Save</button></div></form><section class="section shared-board"><details id="board-details"><summary>Shared field outcome · match ${observation.match}</summary><div id="board-editor"></div></details></section>`;
+    root.innerHTML = `<div class="page-heading"><h2>FTC BIOBUZZ Scout Form</h2></div><div class="live-score" id="live-score" aria-live="polite">${scoreMarkup()}</div><form id="scout-form" class="scout-form" aria-label="Match scouting"><div class="errors" id="scout-error" role="alert"></div>${identity}${section("Auto", autoRobot + autoScoring)}${section("Teleop", teleScoring + teleRobot)}${section("End", endScoring + endRobot)}<div class="match-submit"><div class="calculated-score"><span>Calculated score</span><strong id="calculated-score">${fmt(scoreObservation(observation).total, 0)}</strong></div><button type="submit" class="primary">Save</button></div></form><section class="section shared-board"><details id="board-details"><summary>Shared field outcome · match ${observation.match}</summary><div id="board-editor"></div></details></section>`;
     const form = root.querySelector<HTMLFormElement>("#scout-form")!;
     bindSteppers(form);
     form.oninput = capture;

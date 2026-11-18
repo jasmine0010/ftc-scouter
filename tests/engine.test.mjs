@@ -10,6 +10,8 @@ import {
   validateBoard,
   validateObservation,
   deriveResults,
+  robotCounts,
+  shotAccuracy,
 } from "../dist/assets/scoring.js";
 import {
   estimateOPR,
@@ -55,14 +57,50 @@ test("phase scoring uses only permitted BIOBUZZ achievements", () => {
   assert.equal(s.movement, 13);
   assert.equal(s.tips, 5);
 });
-test("placement and launch action counts are not final-state points", () => {
+test("live actions estimate a robot's points; missed shots and launches score nothing", () => {
   const o = blankObservation("e", 1);
-  o.tele.flowerPlaced = 80;
-  o.tele.gardenDelivered = 90;
+  o.auto.scored = 2;
+  o.tele.scored = 3;
+  o.tele.missed = 4;
+  o.tele.flowerPlaced = 2;
+  o.tele.gardenDelivered = 6;
+  const c = robotCounts(o);
+  assert.equal(c.cell, 5);
+  assert.equal(c.shots, 9);
+  assert.equal(c.accuracy, 5 / 9);
+  assert.equal(
+    scoreObservation(o).total,
+    5 * GAME.points.cell + 2 * GAME.points.flower + 6 * GAME.points.garden,
+  );
+  assert.deepEqual(validateObservation(o), []);
+});
+test("matches scouted before Scored/Missed keep their end-of-match counts", () => {
+  const o = blankObservation("e", 1);
+  delete o.auto.scored;
+  delete o.auto.missed;
+  delete o.tele.scored;
+  delete o.tele.missed;
   o.tele.pollen = 100;
   o.tele.nectar = 20;
-  assert.equal(scoreObservation(o).total, 0);
-  assert.deepEqual(validateObservation(o), []);
+  o.tele.flowerPlaced = 80;
+  o.tele.cell = 4;
+  o.tele.flower = 1;
+  const c = robotCounts(o);
+  assert.equal(c.cell, 4);
+  assert.equal(c.flower, 1);
+  assert.equal(c.garden, 0);
+  assert.equal(c.shots, 120);
+  assert.equal(c.accuracy, null);
+  assert.equal(shotAccuracy([o]), null);
+  assert.equal(
+    scoreObservation(o).total,
+    4 * GAME.points.cell + GAME.points.flower,
+  );
+});
+test("scored and missed must be whole numbers", () => {
+  const o = blankObservation("e", 1);
+  o.tele.missed = 1.5;
+  assert.ok(validateObservation(o).some((e) => e.startsWith("missed")));
 });
 test("fouls credit opponent; own earned score stays intact and net is labeled separately", () => {
   const a = blankObservation("e", 1),
@@ -436,4 +474,19 @@ test("official BIOBUZZ adapter maps verified Swagger names, RP, DQ and surrogate
   assert.equal(row.surrogate, "1");
   assert.equal(row.dq, "3");
   assert.equal(parseCSV(converted.teams).length, 4);
+});
+
+test("Stopped working weighs reliability; older Breakdown answers still count", () => {
+  const obs = ["no", "briefly", "most", undefined].map((stopped, i) => {
+    const o = blankObservation("e", i + 1);
+    o.team = 11770;
+    if (stopped) o.stopped = stopped;
+    else o.breakdown = true;
+    return o;
+  });
+  const db = { events: [], observations: obs };
+  // no = 0, briefly = 0.5, most = 1, legacy breakdown = 1 → 2.5 of 4 matches lost
+  assert.equal(teamStats(db, 11770, "e").reliability, 1 - 2.5 / 4);
+  obs[1].stopped = "sometimes";
+  assert.ok(validateObservation(obs[1]).some((e) => e.startsWith("Stopped")));
 });

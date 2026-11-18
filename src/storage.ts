@@ -22,6 +22,26 @@ export let settings: Settings = {
   syncUrl: "/api/sync",
 };
 export let persistenceError = "";
+/**
+ * Where the sync service lives. Empty means this same site (the Node server).
+ * A GitHub Pages build sets it in config.json to the Cloudflare Worker's address.
+ */
+export let apiBase = "";
+export const apiUrl = (path: string) => apiBase + path;
+/** Headers for team-only endpoints (sync, official event import). */
+export const teamHeaders = (): Record<string, string> =>
+  settings.teamCode ? { "X-Team-Code": settings.teamCode } : {};
+async function loadConfig() {
+  try {
+    const response = await fetch("./config.json", { cache: "no-cache" });
+    if (!response.ok) return;
+    const config = (await response.json()) as { apiBase?: unknown };
+    if (typeof config.apiBase === "string")
+      apiBase = config.apiBase.trim().replace(/\/+$/, "");
+  } catch {
+    // Offline before the first visit, or no config: keep same-origin sync.
+  }
+}
 export let syncState = "Local";
 const listeners = new Set<() => void>();
 export const onChange = (fn: () => void) => {
@@ -46,6 +66,7 @@ async function put(key: string, value: unknown): Promise<void> {
   });
 }
 export async function initialize() {
+  await loadConfig();
   handle = await new Promise<IDBDatabase>((resolve, reject) => {
     const r = indexedDB.open("curiosity-biobuzz", 1);
     r.onupgradeneeded = () => r.result.createObjectStore("state");
@@ -255,7 +276,29 @@ export function validateDatabase(value: unknown): asserts value is Database {
                   pt.x > GAME.limits.fieldInches ||
                   pt.y > GAME.limits.fieldInches,
               ),
-          ),
+          ) ||
+          (r.notes !== undefined && typeof r.notes !== "string") ||
+          (r.origin !== undefined &&
+            (!Number.isFinite(r.origin.x) ||
+              !Number.isFinite(r.origin.y) ||
+              r.origin.x < 0 ||
+              r.origin.y < 0 ||
+              r.origin.x > GAME.limits.fieldInches ||
+              r.origin.y > GAME.limits.fieldInches)) ||
+          (r.marks !== undefined &&
+            (!Array.isArray(r.marks) ||
+              r.marks.some(
+                (m) =>
+                  (m.type !== "intake" && m.type !== "launch") ||
+                  !Number.isInteger(m.at) ||
+                  m.at < 0 ||
+                  !Number.isFinite(m.x) ||
+                  !Number.isFinite(m.y) ||
+                  m.x < 0 ||
+                  m.y < 0 ||
+                  m.x > GAME.limits.fieldInches ||
+                  m.y > GAME.limits.fieldInches,
+              ))),
       )
     )
       throw new Error("Invalid pit data, photo, or vector route.");
@@ -291,12 +334,21 @@ export async function sync() {
   syncState = "Syncing";
   emit();
   try {
-    const response = await fetch(settings.syncUrl, {
+    const url = settings.syncUrl.startsWith("/")
+      ? apiUrl(settings.syncUrl)
+      : settings.syncUrl;
+    const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...teamHeaders() },
       body: JSON.stringify(database),
       signal: AbortSignal.timeout(12000),
     });
+    if (response.status === 401) {
+      syncState = settings.teamCode
+        ? "Wrong team code · saved on this device"
+        : "Team code needed · saved on this device";
+      return;
+    }
     if (!response.ok) throw new Error(String(response.status));
     const data: unknown = await response.json();
     validateDatabase(data);

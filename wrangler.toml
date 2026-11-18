@@ -1,0 +1,23 @@
+# Cloudflare Worker that syncs scouting data between devices.
+# Setup steps: docs/DEPLOY.md. Run `npm run build` before `npx wrangler deploy`.
+name = "curiosity-scout-sync"
+main = "worker/index.mjs"
+compatibility_date = "2025-06-01"
+
+[[durable_objects.bindings]]
+name = "TEAM_STORE"
+class_name = "TeamStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TeamStore"]
+
+[vars]
+# Sites allowed to sync, comma-separated. Replace YOUR-GITHUB-USERNAME.
+# Add http://127.0.0.1:8766 only while testing the Pages build locally.
+ALLOWED_ORIGINS = "https://YOUR-GITHUB-USERNAME.github.io"
+
+# Secrets are NOT stored here. Set them with:
+#   npx wrangler secret put TEAM_CODE
+#   npx wrangler secret put FTC_API_USERNAME   (optional)
+#   npx wrangler secret put FTC_API_TOKEN      (optional)

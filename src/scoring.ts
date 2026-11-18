@@ -9,18 +9,60 @@ import {
   type RPThresholds,
   type OfficialResult,
 } from "./types.js";
+/**
+ * What a robot's scout recorded, in one shape for old and new forms.
+ * Older matches recorded end-of-match CELL/FLOWER/GARDEN counts per robot; when any
+ * are present they are used as-is. Newer matches record live actions (shots scored,
+ * FLOWER placements, GARDEN drops), which become an estimate of the same counts.
+ */
+export function robotCounts(o: Observation) {
+  const legacy = o.tele.cell + o.tele.flower + o.tele.garden > 0;
+  const scored = (o.auto.scored ?? 0) + (o.tele.scored ?? 0),
+    missed = (o.auto.missed ?? 0) + (o.tele.missed ?? 0),
+    tracked = o.auto.scored !== undefined || o.tele.scored !== undefined;
+  return {
+    cell: legacy ? o.tele.cell : scored,
+    flower: legacy
+      ? o.tele.flower
+      : (o.auto.flowerPlaced ?? 0) + (o.tele.flowerPlaced ?? 0),
+    garden: legacy
+      ? o.tele.garden
+      : (o.auto.gardenDelivered ?? 0) + (o.tele.gardenDelivered ?? 0),
+    shots: tracked
+      ? scored + missed
+      : o.auto.pollen + o.auto.nectar + o.tele.pollen + o.tele.nectar,
+    scored,
+    missed,
+    /** Share of shots that went in; null when the match has no Scored/Missed data. */
+    accuracy:
+      tracked && scored + missed > 0 ? scored / (scored + missed) : null,
+  };
+}
+/** Scored ÷ (scored + missed) across matches that recorded shots; null if none did. */
+export function shotAccuracy(obs: Observation[]): number | null {
+  let scored = 0,
+    shots = 0;
+  for (const o of obs) {
+    const c = robotCounts(o);
+    if (c.accuracy === null) continue;
+    scored += c.scored;
+    shots += c.scored + c.missed;
+  }
+  return shots ? scored / shots : null;
+}
 export function scoreObservation(o: Observation) {
-  const p = GAME.points;
+  const p = GAME.points,
+    counts = robotCounts(o);
   const c = {
     leave: +o.auto.leave * p.leave,
     autoPark: +o.auto.park * p.park,
     autoTips: o.auto.tips * p.tip,
     telePark: +o.tele.park * p.park,
     teleTips: o.tele.tips * p.tip,
-    cell: o.tele.cell * p.cell,
-    flower: o.tele.flower * p.flower,
+    cell: counts.cell * p.cell,
+    flower: counts.flower * p.flower,
     bottom: o.bottom * p.bottom,
-    garden: o.tele.garden * p.garden,
+    garden: counts.garden * p.garden,
   };
   const auto = c.leave + c.autoPark + c.autoTips,
     tele = c.telePark + c.teleTips + c.cell + c.flower + c.bottom + c.garden;
@@ -106,7 +148,12 @@ export function validateObservation(o: Observation, db?: Database): string[] {
       if (!Number.isFinite(value) || value < 0 || !Number.isInteger(value))
         errors.push(`${key} must be a nonnegative whole number.`);
     }
-    for (const key of ["flowerPlaced", "gardenDelivered"] as const)
+    for (const key of [
+      "flowerPlaced",
+      "gardenDelivered",
+      "scored",
+      "missed",
+    ] as const)
       if (
         phase[key] !== undefined &&
         (!Number.isInteger(phase[key]) || phase[key] < 0)
@@ -134,6 +181,8 @@ export function validateObservation(o: Observation, db?: Database): string[] {
     errors.push(
       "Credited end-state elements exceed all 56 elements on the field.",
     );
+  if (o.stopped !== undefined && !["no", "briefly", "most"].includes(o.stopped))
+    errors.push("Stopped working must be No, Briefly or Most of match.");
   if (o.downtime > GAME.limits.autoSeconds + GAME.limits.teleSeconds)
     errors.push("Downtime exceeds match duration.");
   if (

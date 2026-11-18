@@ -50,6 +50,12 @@ const server = http.createServer(async (req, res) => {
         new URL(req.headers.origin).host !== req.headers.host
       )
         return json(res, 403, { error: "Cross-origin sync is not allowed." });
+      // Optional shared passcode, same as the Cloudflare Worker's TEAM_CODE.
+      if (
+        process.env.TEAM_CODE &&
+        req.headers["x-team-code"] !== process.env.TEAM_CODE
+      )
+        return json(res, 401, { error: "Wrong team code." });
       const input = await body(req);
       validateDatabase(input);
       const task = queue.then(async () => {

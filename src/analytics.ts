@@ -4,6 +4,7 @@ import {
   deriveResults,
   resultRP,
   scoreObservation,
+  robotCounts,
 } from "./scoring.js";
 import {
   active,
@@ -75,7 +76,18 @@ export function teamStats(db: Database, team: number, eventId?: string) {
     ...stats,
     categories,
     reliability: obs.length
-      ? 1 - obs.filter((o) => o.breakdown).length / obs.length
+      ? 1 -
+        obs.reduce(
+          (n, o) =>
+            n +
+            (o.stopped === "briefly"
+              ? 0.5
+              : o.stopped === "most" || (!o.stopped && o.breakdown)
+                ? 1
+                : 0),
+          0,
+        ) /
+          obs.length
       : 1,
   };
 }
@@ -225,16 +237,19 @@ export function strength(db: Database, team: number, eventId: string) {
     +(a.autoPark === true) * GAME.points.park +
     +(a.park === true) * GAME.points.park;
   const flowers = blend(
-      mean(s.obs.map((o) => o.tele.flower)),
+      mean(s.obs.map((o) => robotCounts(o).flower)),
       Number(a.flowersAvg ?? 0),
     ),
     garden = blend(
-      mean(s.obs.map((o) => o.tele.garden)),
+      mean(s.obs.map((o) => robotCounts(o).garden)),
       Number(a.gardenAvg ?? 0),
     );
   const tips = blend(s.tips.average, tipPrior),
     movement = blend(s.movement.average, movementPrior),
-    cell = blend(mean(s.obs.map((o) => o.tele.cell)), Number(a.cellAvg ?? 0));
+    cell = blend(
+      mean(s.obs.map((o) => robotCounts(o).cell)),
+      Number(a.cellAvg ?? 0),
+    );
   const bottom = blend(mean(s.obs.map((o) => o.bottom)), a.bottomBonus ? 1 : 0),
     penalties = s.penalties.average;
   const score =
@@ -273,7 +288,7 @@ export function strength(db: Database, team: number, eventId: string) {
     reliability: blend(s.reliability, a.reliability === "High" ? 0.75 : 0.95),
     pitWeight: w,
     sample: n,
-    owns: !!a.topNectar || s.obs.some((o) => o.tele.flower > 0),
+    owns: !!a.topNectar || s.obs.some((o) => robotCounts(o).flower > 0),
     autoTips: blend(
       mean(s.obs.map((o) => o.auto.tips)),
       Number(a.autoTipsAvg ?? 0),
