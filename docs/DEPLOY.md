@@ -19,15 +19,11 @@ You need: a GitHub account, a free Cloudflare account, and this project on your 
 2. Make sure your work is committed, then push it. Replace `YOUR-GITHUB-USERNAME`:
 
 ```bash
-git branch -M main
-```
-
-```bash
 git remote add origin https://github.com/YOUR-GITHUB-USERNAME/ftc-scouter.git
 ```
 
 ```bash
-git push -u origin main
+git push -u origin master
 ```
 
 Only code is pushed. Scouting data never goes into the repository: `.data/` is ignored, and the live data lives in Cloudflare.
@@ -78,7 +74,7 @@ npx wrangler secret put FTC_API_TOKEN
 2. **Settings → Secrets and variables → Actions → Variables tab → New repository variable**:
    - Name: `SYNC_API_BASE`
    - Value: the Worker address from step 2.4, with **no** trailing slash and **no** `/api`, e.g. `https://curiosity-scout-sync.YOUR-SUBDOMAIN.workers.dev`
-3. **Actions tab → Deploy to GitHub Pages → Run workflow**. Later pushes to `main` deploy automatically. The workflow runs the tests first and only publishes if they pass.
+3. **Actions tab → Deploy to GitHub Pages → Run workflow**. Later pushes to `master` deploy automatically. The workflow runs the tests first and only publishes if they pass.
 4. After about a minute the app is live at `https://YOUR-GITHUB-USERNAME.github.io/ftc-scouter/`.
 
 **Check it:** open `https://YOUR-GITHUB-USERNAME.github.io/ftc-scouter/config.json`. It should show your Worker address.
@@ -102,7 +98,7 @@ Data on your laptop at `http://127.0.0.1:…` belongs to that address and won't 
 
 | What changed | What to do |
 |---|---|
-| App code (`src/`, `public/`) | Push to `main`; Pages redeploys automatically. Phones pick it up after a reload or two. |
+| App code (`src/`, `public/`) | Push to `master`; Pages redeploys automatically. Phones pick it up after a reload or two. |
 | Worker or merge logic (`worker/`, `src/storage.ts`, `src/data-cleanup.ts`) | `npm run build`, then `npx wrangler deploy` |
 | New team code | `npx wrangler secret put TEAM_CODE`, then give scouts the new code |
 | Backup | Event data → **Export all JSON**, e.g. after each event day |
