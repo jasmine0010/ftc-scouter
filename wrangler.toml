@@ -15,7 +15,7 @@ new_sqlite_classes = ["TeamStore"]
 [vars]
 # Sites allowed to sync, comma-separated. Replace YOUR-GITHUB-USERNAME.
 # Add http://127.0.0.1:8766 only while testing the Pages build locally.
-ALLOWED_ORIGINS = "https://YOUR-GITHUB-USERNAME.github.io"
+ALLOWED_ORIGINS = "https://jasmine0010.github.io"
 
 # Secrets are NOT stored here. Set them with:
 #   npx wrangler secret put TEAM_CODE
